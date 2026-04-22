@@ -84,7 +84,7 @@
 | 3   | List 接口（ArrayList/LinkedList/Vector）                                                                                                                                                                     |
 | 4   | ArrayList 底层实现（扩容机制）                                                                                                                                                                                     |
 | 5   | LinkedList 底层实现（双向链表）                                                                                                                                                                                    |
-| 6   | ArrayList vs LinkedList 区别与选择                                                                                                                                                                            |
+| 6   | ArrayList vs LinkedList                                                                                                                                                                                  |
 | 7   | Set 接口（HashSet/LinkedHashSet/TreeSet）                                                                                                                                                                    |
 | 8   | HashSet 底层实现（HashMap）                                                                                                                                                                                    |
 | 9   | LinkedHashSet 实现原理（维护插入顺序）                                                                                                                                                                               |
