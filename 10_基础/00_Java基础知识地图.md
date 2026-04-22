@@ -67,11 +67,11 @@
 | 3   | 泛型接口（Generic Interface）                  |
 | 4   | 泛型方法（Generic Method）                     |
 | 5   | 泛型通配符（? extends T / ? super T / ?）       |
-| 6   | 泛型擦除（Type Erasure）机制                     |
+| 6   | 泛型擦除机制（Type Erasure）                     |
 | 7   | 泛型擦除后的类型桥接                               |
 | 8   | 泛型约束（不能实例化/不能创建泛型数组/静态方法不能使用类泛型）         |
 | 9   | 泛型与反射结合                                  |
-| 10  | PESC（Producer Extends, Consumer Super）原则 |
+| 10  | PESC原则（Producer Extends, Consumer Super） |
 
 ---
 
