@@ -77,24 +77,24 @@
 
 ## 五、集合框架
 
-| #   | 知识点                                                                                                                                                                                                      |
-| --- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 1   | Collection vs Collections 区别                                                                                                                                                                             |
-| 2   | Iterable vs Iterator 区别                                                                                                                                                                                  |
-| 3   | List 接口（ArrayList/LinkedList/Vector）                                                                                                                                                                     |
-| 4   | ArrayList 底层实现（扩容机制）                                                                                                                                                                                     |
-| 5   | LinkedList 底层实现（双向链表）                                                                                                                                                                                    |
-| 6   | ArrayList vs LinkedList                                                                                                                                                                                  |
-| 7   | Set 接口（HashSet/LinkedHashSet/TreeSet）                                                                                                                                                                    |
-| 8   | HashSet 底层实现（HashMap）                                                                                                                                                                                    |
-| 9   | LinkedHashSet 实现原理（维护插入顺序）                                                                                                                                                                               |
-| 10  | TreeSet 底层实现（红黑树）                                                                                                                                                                                        |
-| 11  | Map 接口（HashMap/LinkedHashMap/TreeMap/Hashtable/ConcurrentHashMap）                                                                                                                                        |
-| 12  | HashMap 底层实现（JDK 1.7 数组+链表 / JDK 1.8+ 红黑树） HashMap 为什么使用红黑树（链表过长时转换） HashMap 扩容机制（负载因子 0.75）HashMap put 流程（哈希计算 → 桶定位 → 链表/红黑树插入） HashMap 的 key 为什么用 String/Integer HashMap 遍历方式（keySet/entrySet/values） |
-| 13  | HashMap 与 Hashtable 的区别（线程安全/同步机制）                                                                                                                                                                       |
-| 14  | Queue 接口（offer/poll/peek）                                                                                                                                                                                |
-| 15  | Deque 接口（双端队列）                                                                                                                                                                                           |
-| 16  | fail-fast 与 fail-safe 机制                                                                                                                                                                                 |
+| #   | 知识点                                                               |
+| --- | ----------------------------------------------------------------- |
+| 1   | Collection vs Collections 区别                                      |
+| 2   | Iterable vs Iterator 区别                                           |
+| 3   | List 接口（ArrayList/LinkedList/Vector）                              |
+| 4   | ArrayList 底层实现（扩容机制）                                              |
+| 5   | LinkedList 底层实现（双向链表）                                             |
+| 6   | ArrayList vs LinkedList                                           |
+| 7   | Set 接口（HashSet/LinkedHashSet/TreeSet）                             |
+| 8   | HashSet 底层实现（HashMap）                                             |
+| 9   | LinkedHashSet 实现原理（维护插入顺序）                                        |
+| 10  | TreeSet 底层实现（红黑树）                                                 |
+| 11  | Map 接口（HashMap/LinkedHashMap/TreeMap/Hashtable/ConcurrentHashMap） |
+| 12  | HashMap 底层实现（JDK 1.7 数组+链表 / JDK 1.8+ 红黑树）                        |
+| 13  | HashMap 与 Hashtable 的区别（线程安全/同步机制）                                |
+| 14  | Queue 接口（offer/poll/peek）                                         |
+| 15  | Deque 接口（双端队列）                                                    |
+| 16  | fail-fast 与 fail-safe 机制                                          |
 
 ---
 
