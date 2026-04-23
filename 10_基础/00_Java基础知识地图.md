@@ -123,31 +123,31 @@
 
 ## 七、注解（Annotation）
 
-| # | 知识点 |
-|---|--------|
-| 1 | 注解的本质（元数据） |
-| 2 | JDK 内置注解（@Override/@Deprecated/@SuppressWarnings） |
-| 3 | 元注解（@Target/@Retention/@Documented/@Inherited） |
-| 4 | 自定义注解 |
-| 5 | 注解的提取（反射 + Annotation 接口） |
-| 6 | 注解的应用场景（Spring/@Component/@Autowired/JUnit 等） |
-| 7 | @FunctionalInterface 注解 |
+| #   | 知识点                                               |
+| --- | ------------------------------------------------- |
+| 1   | 注解的本质（元数据）                                        |
+| 2   | JDK 内置注解（@Override/@Deprecated/@SuppressWarnings） |
+| 3   | 元注解（@Target/@Retention/@Documented/@Inherited）    |
+| 4   | 自定义注解                                             |
+| 5   | 注解的提取（反射 + Annotation 接口）                         |
+| 6   | 注解的应用场景（Spring/@Component/@Autowired/JUnit 等）     |
+| 7   | @FunctionalInterface 注解                           |
 
 ---
 
 ## 八、反射（Reflection）
 
-| # | 知识点 |
-|---|--------|
-| 1 | 反射的原理与应用场景 |
-| 2 | Class 对象的获取方式（.class/forName/getClass） |
-| 3 | Class 类常用方法（getDeclaredFields/getMethods/getConstructors） |
-| 4 | 反射创建对象（newInstance/Constructor.newInstance） |
-| 5 | 反射调用方法（Method.invoke） |
-| 6 | 反射访问字段（Field.get/set） |
-| 7 | 反射绕过泛型检查 |
-| 8 | 反射与工厂模式/代理模式 |
-| 9 | 反射的性能开销 |
+| #   | 知识点                                                       |
+| --- | --------------------------------------------------------- |
+| 1   | 反射的原理与应用场景                                                |
+| 2   | Class 对象的获取方式（.class/forName/getClass）                    |
+| 3   | Class 类常用方法（getDeclaredFields/getMethods/getConstructors） |
+| 4   | 反射创建对象（newInstance/Constructor.newInstance）               |
+| 5   | 反射调用方法（Method.invoke）                                     |
+| 6   | 反射访问字段（Field.get/set）                                     |
+| 7   | 反射绕过泛型检查                                                  |
+| 8   | 反射与工厂模式/代理模式                                              |
+| 9   | 反射的性能开销                                                   |
 
 ---
 

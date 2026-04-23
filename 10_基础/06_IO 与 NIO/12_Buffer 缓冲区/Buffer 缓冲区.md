@@ -1,12 +1,9 @@
 ---
-id: card_79
-title: Buffer 缓冲区（flip / clear / rewind）
+title: Buffer 缓冲区
 tags:
   - Java/IO
-  - 卡片
-  - 常考
   - 原理型
-module: "06_IO与NIO"
+module: 06_IO与NIO
 created: 2026-04-18
 ---
 
