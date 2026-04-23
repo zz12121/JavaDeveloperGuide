@@ -100,24 +100,24 @@
 
 ## 六、IO 与 NIO
 
-| # | 知识点 |
-|---|--------|
-| 1 | IO 分类（字节流/字符流、输入流/输出流） |
-| 2 | 节点流 vs 处理流（装饰器模式） |
-| 3 | InputStream/OutputStream 体系 |
-| 4 | Reader/Writer 体系 |
-| 5 | 字节流转字符流（InputStreamReader/OutputStreamWriter） |
-| 6 | 缓冲流（BufferedInputStream/BufferedReader） |
-| 7 | 打印流（PrintStream/PrintWriter） |
-| 8 | 对象序列化（Serializable/externalizable） |
-| 9 | transient 关键字 |
-| 10 | serialVersionUID 的作用 |
-| 11 | NIO 三大核心（Channel/Buffer/Selector） |
-| 12 | Buffer 缓冲区（flip/clear/rewind） |
-| 13 | Channel 通道（FileChannel/SocketChannel/ServerSocketChannel） |
-| 14 | Selector 选择器（多路复用） |
-| 15 | 直接内存 vs 堆内存 |
-| 16 | BIO/NIO/AIO 区别（同步阻塞/同步非阻塞/异步非阻塞） |
+| #   | 知识点                                                       |
+| --- | --------------------------------------------------------- |
+| 1   | IO 分类（字节流/字符流、输入流/输出流）                                    |
+| 2   | 节点流 vs 处理流（装饰器模式）                                         |
+| 3   | InputStream/OutputStream 体系                               |
+| 4   | Reader/Writer 体系                                          |
+| 5   | 字节流转字符流（InputStreamReader/OutputStreamWriter）             |
+| 6   | 缓冲流（BufferedInputStream/BufferedReader）                   |
+| 7   | 打印流（PrintStream/PrintWriter）                              |
+| 8   | 对象序列化（Serializable/externalizable）                        |
+| 9   | transient 关键字                                             |
+| 10  | serialVersionUID 的作用                                      |
+| 11  | NIO 三大核心（Channel/Buffer/Selector）                         |
+| 12  | Buffer 缓冲区（flip/clear/rewind）                             |
+| 13  | Channel 通道（FileChannel/SocketChannel/ServerSocketChannel） |
+| 14  | Selector 选择器（多路复用）                                        |
+| 15  | 直接内存 vs 堆内存                                               |
+| 16  | BIO/NIO/AIO 区别（同步阻塞/同步非阻塞/异步非阻塞）                          |
 
 ---
 
