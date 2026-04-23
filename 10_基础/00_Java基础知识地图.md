@@ -153,16 +153,16 @@
 
 ## 九、字符串（String）
 
-| # | 知识点 |
-|---|--------|
-| 1 | String 不可变性（为什么设计为不可变） |
-| 2 | String、StringBuilder、StringBuffer 区别 |
-| 3 | String.intern() 方法 |
-| 4 | String 常用方法（length/charAt/substring/split/trim/indexOf 等） |
-| 5 | String 的 + 拼接原理（编译期优化） |
-| 6 | String 的哈希计算 |
-| 7 | 字符串常量池（String Pool） |
-| 8 | new String("xxx") 创建几个对象 |
+| #   | 知识点                                                       |
+| --- | --------------------------------------------------------- |
+| 1   | String 不可变性（为什么设计为不可变）                                    |
+| 2   | String、StringBuilder、StringBuffer 区别                      |
+| 3   | String.intern() 方法                                        |
+| 4   | String 常用方法（length/charAt/substring/split/trim/indexOf 等） |
+| 5   | String 的 + 拼接原理（编译期优化）                                    |
+| 6   | String 的哈希计算                                              |
+| 7   | 字符串常量池（String Pool）                                       |
+| 8   | new String("xxx") 创建几个对象                                  |
 
 ---
 
