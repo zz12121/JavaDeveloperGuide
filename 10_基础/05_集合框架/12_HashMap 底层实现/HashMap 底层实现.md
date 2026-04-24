@@ -291,14 +291,14 @@ final V putVal(int hash, K key, V value, boolean onlyIfAbsent,
 
 ## 关键点总结
 
-|步骤|说明|
-|---|---|
-|hash 计算|`hashCode()` 高 16 位异或低 16 位|
-|桶定位|`(n - 1) & hash` 位运算|
-|key 判重|`hash` 相同 + `==` 或 `equals()`|
-|链表插入|尾插法（JDK 8）|
-|树化条件|链表长度 ≥ 8 且数组长度 ≥ 64|
-|扩容触发|`++size > threshold`|
+| 步骤      | 说明                          |
+| ------- | --------------------------- |
+| hash 计算 | `hashCode()` 高 16 位异或低 16 位 |
+| 桶定位     | `(n - 1) & hash` 位运算        |
+| key 判重  | `hash` 相同 + == 或 `equals()` |
+| 链表插入    | 尾插法（JDK 8）                  |
+| 树化条件    | 链表长度 ≥ 8 且数组长度 ≥ 64         |
+| 扩容触发    | `++size > threshold`        |
 
 # HashMap 为什么使用红黑树（链表过长时转换）
 

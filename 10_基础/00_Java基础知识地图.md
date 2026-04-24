@@ -195,24 +195,19 @@
 
 ## 十二、其他核心概念
 
-| # | 知识点 |
-|---|--------|
-| 1 | == vs equals() |
-| 2 | hashCode() 与 equals() 关系 |
-| 3 | Object 类方法与 Objects 工具类 |
-| 4 | 深拷贝 vs 浅拷贝 |
-| 5 | clone() 方法与 Cloneable 接口 |
-| 6 | Comparable vs Comparator |
-| 7 | 枚举类（enum） |
-| 8 | 枚举实现接口 |
-| 9 | 枚举单例模式 |
-| 10 | System 类常用方法（arraycopy/exit/gc/currentTimeMillis） |
-| 11 | Math 类常用方法 |
-| 12 | Random 类的线程安全问题 |
-| 13 | ThreadLocalRandom（高性能随机数） |
-| 14 | BigDecimal 浮点数精度问题 |
-| 15 | Date/LocalDateTime/Instant 时间处理 |
-| 16 | Arrays 工具类常用方法 |
+| #   | 知识点                                               |
+| --- | ------------------------------------------------- |
+| 1   | Object 类方法与 Objects 工具类                           |
+| 2   | 深拷贝 vs 浅拷贝                                        |
+| 3   | Comparable vs Comparator                          |
+| 4   | 枚举类（enum）                                         |
+| 10  | System 类常用方法（arraycopy/exit/gc/currentTimeMillis） |
+| 11  | Math 类常用方法                                        |
+| 12  | Random 类的线程安全问题                                   |
+| 13  | ThreadLocalRandom（高性能随机数）                         |
+| 14  | BigDecimal 浮点数精度问题                                |
+| 15  | Date/LocalDateTime/Instant 时间处理                   |
+| 16  | Arrays 工具类常用方法                                    |
 
 ---
 
