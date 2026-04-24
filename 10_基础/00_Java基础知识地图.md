@@ -213,20 +213,18 @@
 
 ## 十三、Java 新特性（JDK 8~21）
 
-| #   | 知识点                                                |
-| --- | -------------------------------------------------- |
-| 1   | 接口默认方法与静态方法（JDK 8）                                 |
-| 2   | 接口私有方法（JDK 9）                                      |
-| 3   | var 局部变量类型推断（JDK 10）                               |
-| 4   | 集合工厂方法（List.of/Set.of/Map.of）（JDK 9）               |
-| 5   | Optional 类（空值处理）（JDK 8）                            |
-| 6   | String 改进（join/lines/strip/repeat/isBlank）（JDK 11） |
-| 7   | Switch 表达式（JDK 12 预览/14 正式）                        |
-| 8   | Text Blocks 文本块（JDK 13 预览/15 正式）                   |
-| 9   | Pattern Matching for instanceof（JDK 14 预览/16 正式）   |
-| 10  | Records 记录类（JDK 14 预览/16 正式）                       |
-| 11  | Sealed Classes 密封类（JDK 15 预览/17 正式）                |
-| 12  | 模式匹配 for switch（JDK 21 正式）                         |
+| #   | 知识点                                                    |
+| --- | ------------------------------------------------------ |
+| 1   | JDK 8新特性（接口默认方法与静态方法、Optional 类）                       |
+| 2   | JDK 9新特性（接口私有方法、集合工厂方法）                                |
+| 3   | JDK 10新特性（var 局部变量类型推断）                                |
+| 4   | JDK 11新特性 (String 改进join/lines/strip/repeat/isBlank)   |
+| 5   | JDK 14新特性 (Switch 表达式、Pattern Matching for instanceof） |
+| 6   | JDK 15新特性（Text Blocks 文本块）                             |
+| 7   | JDK 16新特性（Records 记录类）                                 |
+| 8   | JDK 17新特性（Sealed Classes 密封类）                          |
+| 9   | JDK 21新特性（模式匹配 for switch）                             |
+
 
 ---
 
