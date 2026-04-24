@@ -168,14 +168,14 @@
 
 ## 十、Lambda 与函数式编程
 
-| # | 知识点 |
-|---|--------|
-| 1 | Lambda 表达式语法 |
-| 2 | 函数式接口（@FunctionalInterface） |
-| 3 | 四大核心函数式接口（Consumer/Supplier/Predicate/Function） |
-| 4 | 方法引用（Method Reference） |
-| 5 | 构造器引用 |
-| 6 | Lambda 表达式作用域（访问局部变量/final 限制） |
+| #   | 知识点                                             |
+| --- | ----------------------------------------------- |
+| 1   | Lambda 表达式语法                                    |
+| 2   | 函数式接口（@FunctionalInterface）                     |
+| 3   | 四大核心函数式接口（Consumer/Supplier/Predicate/Function） |
+| 4   | 方法引用（Method Reference）                          |
+| 5   | 构造器引用                                           |
+| 6   | Lambda 表达式作用域（访问局部变量/final 限制）                  |
 
 ---
 
