@@ -181,15 +181,15 @@
 
 ## 十一、Stream API
 
-| # | 知识点 |
-|---|--------|
-| 1 | Stream 的创建（Collection.stream/Arrays.stream/Stream.of） |
-| 2 | 中间操作（filter/map/flatMap/distinct/sorted/limit/skip） |
-| 3 | 终端操作（collect/forEach/count/min/max/sum/reduce） |
-| 4 | Optional 与 Stream 结合 |
-| 5 | 并行流（parallelStream）原理 |
-| 6 | Stream 惰性求值 |
-| 7 | Stream 的性能考虑 |
+| #   | 知识点                                                   |
+| --- | ----------------------------------------------------- |
+| 1   | Stream 的创建（Collection.stream/Arrays.stream/Stream.of） |
+| 2   | 中间操作（filter/map/flatMap/distinct/sorted/limit/skip）   |
+| 3   | 终端操作（collect/forEach/count/min/max/sum/reduce）        |
+| 4   | Optional 与 Stream 结合                                  |
+| 5   | 并行流原理（parallelStream）                                 |
+| 6   | Stream 惰性求值                                           |
+| 7   | Stream 的性能考虑                                          |
 
 ---
 
