@@ -201,10 +201,10 @@
 | 2   | 深拷贝 vs 浅拷贝                                        |
 | 3   | Comparable vs Comparator                          |
 | 4   | 枚举类（enum）                                         |
-| 10  | System 类常用方法（arraycopy/exit/gc/currentTimeMillis） |
+| 5   | System 类常用方法（arraycopy/exit/gc/currentTimeMillis） |
 | 11  | Math 类常用方法                                        |
-| 12  | Random 类的线程安全问题                                   |
-| 13  | ThreadLocalRandom（高性能随机数）                         |
+| 6   | Random 类的线程安全问题                                   |
+| 7   | ThreadLocalRandom（高性能随机数）                         |
 | 14  | BigDecimal 浮点数精度问题                                |
 | 15  | Date/LocalDateTime/Instant 时间处理                   |
 | 16  | Arrays 工具类常用方法                                    |
@@ -213,20 +213,20 @@
 
 ## 十三、Java 新特性（JDK 8~21）
 
-| # | 知识点 |
-|---|--------|
-| 1 | 接口默认方法与静态方法（JDK 8） |
-| 2 | 接口私有方法（JDK 9） |
-| 3 | var 局部变量类型推断（JDK 10） |
-| 4 | 集合工厂方法（List.of/Set.of/Map.of）（JDK 9） |
-| 5 | Optional 类（空值处理）（JDK 8） |
-| 6 | String 改进（join/lines/strip/repeat/isBlank）（JDK 11） |
-| 7 | Switch 表达式（JDK 12 预览/14 正式） |
-| 8 | Text Blocks 文本块（JDK 13 预览/15 正式） |
-| 9 | Pattern Matching for instanceof（JDK 14 预览/16 正式） |
-| 10 | Records 记录类（JDK 14 预览/16 正式） |
-| 11 | Sealed Classes 密封类（JDK 15 预览/17 正式） |
-| 12 | 模式匹配 for switch（JDK 21 正式） |
+| #   | 知识点                                                |
+| --- | -------------------------------------------------- |
+| 1   | 接口默认方法与静态方法（JDK 8）                                 |
+| 2   | 接口私有方法（JDK 9）                                      |
+| 3   | var 局部变量类型推断（JDK 10）                               |
+| 4   | 集合工厂方法（List.of/Set.of/Map.of）（JDK 9）               |
+| 5   | Optional 类（空值处理）（JDK 8）                            |
+| 6   | String 改进（join/lines/strip/repeat/isBlank）（JDK 11） |
+| 7   | Switch 表达式（JDK 12 预览/14 正式）                        |
+| 8   | Text Blocks 文本块（JDK 13 预览/15 正式）                   |
+| 9   | Pattern Matching for instanceof（JDK 14 预览/16 正式）   |
+| 10  | Records 记录类（JDK 14 预览/16 正式）                       |
+| 11  | Sealed Classes 密封类（JDK 15 预览/17 正式）                |
+| 12  | 模式匹配 for switch（JDK 21 正式）                         |
 
 ---
 
