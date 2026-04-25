@@ -112,4 +112,31 @@ var list = new ArrayList<String>();  // 明确指定泛型
 
 ---
 
+---
+
+### 7. Lambda 表达式中的 var 参数（JDK 11）
+
+JDK 10 的 `var` 不能直接用于 Lambda 参数，但 JDK 11 扩展了 `var` 的使用范围：
+
+```java
+// ❌ JDK 10：Lambda 参数不能用 var
+Function<String, String> f1 = (var x) -> x.toUpperCase();  // 编译错误
+
+// ✅ JDK 11+：Lambda 参数可以使用 var
+Function<String, String> f2 = (var x) -> x.toUpperCase();
+
+// ✅ JDK 11+：配合注解使用（这是 var 在 Lambda 中的主要用途）
+Function<String, String> f3 = (@NonNull var x) -> x.toUpperCase();
+// 用于在 Lambda 表达式中为参数添加注解（之前做不到）
+
+@Retention(RetentionPolicy.RUNTIME)
+@interface NonNull {}
+```
+
+> **实际用途**：Lambda 参数加注解是 `var` 在 Lambda 中使用 var 的唯一实际意义——因为 Lambda 参数的类型可以从上下文推断，加 `var` 本身没意义，但如果需要注解（用于 null 检查、校验等），就必须用 `var` 显式声明参数类型。
+
+---
+
 ## 关联知识点
+
+

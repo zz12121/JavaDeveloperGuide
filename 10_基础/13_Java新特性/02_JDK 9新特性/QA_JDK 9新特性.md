@@ -95,3 +95,108 @@ List<String> mutable = new ArrayList<>(List.of("A", "B", "C"));
 ## Q4：Map.of() 最多支持多少个键值对？
 
 **A**：`Map.of()` 重载方法最多支持 **10 个键值对**（5 对参数版本）。超过 10 个使用 `Map.ofEntries(Map.entry(...), ...)` 或 `Map.copyOf(map)`。
+
+---
+
+# Java 平台模块系统（JPMS）
+
+## Q5：什么是 JPMS？为什么需要模块化？
+
+**A**：JPMS（Java Platform Module System，JEP 261）是 JDK 9 引入的模块系统，通过 `module-info.java` 文件声明模块的依赖、导出和开放权限。
+
+**解决的问题**：
+
+| 问题 | ClassPath 时代 | JPMS 模块系统 |
+|------|--------------|-------------|
+| 依赖透明性 | JAR 依赖不透明，传递依赖全包含 | `requires` 显式声明 |
+| 版本冲突 | 类路径无法感知版本，同名类冲突 | 同一模块不能有两个版本 |
+| 可见性 | 所有 public 类都能被访问 | `exports` 控制可见性 |
+| 反射权限 | 无限反射 | 需要 `opens` 才允许运行时反射 |
+
+**JDK 9 本身也模块化了**：原来 6000+ 个类被组织成约 95 个模块，如 `java.base`、`java.sql`、`jdk.crypto.ec`，可以通过 `java --list-modules` 查看。
+
+---
+
+## Q6：`exports` 和 `opens` 有什么区别？
+
+**A**：
+
+- `exports`：编译期和运行时都可以访问导出包中的 **public 类型**（不包括 private 成员）
+- `opens`：允许运行时**反射访问**包内所有成员（包括 private）
+
+```java
+module com.example {
+    exports com.example.api;   // 其他模块可以访问 public 类
+    opens com.example.entity;  // 其他模块可以通过反射访问 private 字段
+}
+
+// 其他模块中：
+User user = new User();              // ✅ exports 允许
+user.name = "test";                  // ❌ 编译错误：name 是 private
+
+user.getClass().getDeclaredField("name").set(user, "test");
+// exports：编译错误（name 是 private）
+// opens：运行时 OK（Spring 依赖注入/Jackson 反序列化依赖此特性）
+```
+
+> **面试总结**：`exports` 控制编译期可见性，`opens` 控制运行时反射可见性。Spring Boot 和 Jackson 能在 JDK 9+ 运行就是因为它们使用了 `opens`（JDK 9 前是无限制反射，JDK 9 后需要显式声明）。
+
+---
+
+## Q7：`requires` 和 `uses` 有什么区别？
+
+**A**：
+
+| 关键字 | 作用 | 用途 |
+|--------|------|------|
+| `requires` | 声明编译期和运行期的模块依赖 | 正常依赖 |
+| `requires static` | 仅声明编译期依赖，运行时不需要 | Lombok、编译期注解处理器 |
+| `uses` | 声明使用某个服务接口（ServiceLoader） | SPI 扩展点 |
+
+```java
+module com.example.app {
+    // 正常运行依赖
+    requires com.google.guava;
+
+    // 编译期依赖（运行时不需要）
+    requires static lombok;
+
+    // 服务消费者：需要 PaymentGateway 接口，但不直接依赖实现
+    uses com.example.spi.PaymentGateway;
+}
+```
+
+---
+
+## Q8：JDK 9 之前哪些模块被移除了？
+
+**A**：JDK 9 重构时移除了以下已过时的模块：
+
+| 被移除的模块 | 原功能 | 替代方案 |
+|-------------|--------|---------|
+| `java.xml.ws` | JAX-WS（Web Service） | `jakarta.xml.ws`（独立 JAR）|
+| `java.corba` | CORBA / RMI-IIOP | 第三方库 |
+| `java.transaction` | JTA（Java Transaction API）| `jakarta.transaction` |
+| `java.activation` | JavaBeans Activation | 第三方库 |
+| `java.xml.bind` | JAXB（XML Binding）| `jakarta.xml.bind` |
+
+> **实际影响**：如果项目从 JDK 8 迁移到 JDK 11+，使用 JAXB 的代码会编译失败，需要手动添加 JAXB 依赖。
+
+---
+
+## Q9：Spring Boot 在 JDK 9+ 是如何解决 `opens` 问题的？
+
+**A**：Spring Framework 5.x 大量使用反射（依赖注入、AOP、Bean 创建），JDK 9 后通过以下方式兼容：
+
+1. **运行时自动打开模块**（`--add-opens` JVM 参数）：
+   ```bash
+   java --add-opens java.base/java.lang=ALL-UNNAMED \
+        --add-opens java.base/java.lang.reflect=ALL-UNNAMED \
+        -jar myapp.jar
+   ```
+
+2. **Spring Boot 3.x 提供 GraalVM 原生支持**：通过 `native-image` 编译时直接分析反射使用并生成配置，无需运行时 `--add-opens`。
+
+> **面试总结**：Spring Boot 2.x 通过 `--add-opens` 参数解决，Spring Boot 3.x 通过 GraalVM 原生镜像解决。
+
+**A**：`Map.of()` 重载方法最多支持 **10 个键值对**（5 对参数版本）。超过 10 个使用 `Map.ofEntries(Map.entry(...), ...)` 或 `Map.copyOf(map)`。

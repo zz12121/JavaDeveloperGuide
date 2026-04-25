@@ -60,6 +60,47 @@ JMM是对硬件内存模型的抽象，但**不等同于**硬件架构：
 - JMM不强制要求工作内存的具体实现方式
 - 只要保证内存访问语义符合JMM规范即可
 
+## JMM 三大特性保证机制
+
+| 特性 | 定义 | JMM 保证手段 | 底层实现 |
+|------|------|-------------|----------|
+| **原子性** | 一个操作不可中断，要么全部执行成功，要么全部不执行 | `synchronized` 关键字 | monitorenter / monitorexit 指令，lock / unlock 操作 |
+| **可见性** | 一个线程修改共享变量后，其他线程能立即看到 | `volatile`、`synchronized`、`final` | 内存屏障刷新工作内存、Store Buffer 刷新、StoreLoad 屏障 |
+| **有序性** | 程序执行顺序按照代码先后顺序 | `volatile`、`synchronized`、`happens-before` 规则 | 内存屏障禁止特定重排序 |
+
+> **面试总结**：JMM 通过**内存屏障**（禁止重排序）和**缓存一致性协议**（保证可见性）这两大底层机制，实现了对三大特性的保证。`synchronized` 同时保证原子性、可见性和有序性；`volatile` 只保证可见性和有序性，不保证复合操作的原子性。
+
+### `final` 字段的 JMM 特殊语义
+
+`final` 字段是 JMM 三大同步机制之一，具有独特的可见性保证：
+
+```java
+public class FinalFieldDemo {
+    private final int x;        // final 字段
+    private int y;             // 普通字段
+
+    public FinalFieldDemo() {
+        x = 1;      // 构造函数中对 final 字段的写入
+        y = 2;      // 普通字段写入
+    }
+
+    // 线程A创建对象
+    FinalFieldDemo obj = new FinalFieldDemo();
+
+    // 线程B读取 obj
+    // ✅ final 字段保证：如果线程B看到 obj != null，则一定能看到 x = 1
+    // ❌ 普通字段 y 不保证：可能看到 y = 0（未初始化时的默认值）
+}
+```
+
+**`final` 的可见性保证原理**：
+1. `final` 字段的写入在构造函数中被"冻结"（freeze action）
+2. 构造函数返回前，所有 final 字段的写入对其他线程可见
+3. 其他线程只要看到对象的正确引用（不为 null），就一定能看到 final 字段的正确值
+4. 底层通过在对象头中记录 final 字段的写入完成状态实现
+
+> ⚠️ **前提条件**：对象的引用不能在构造函数中"this 逃逸"（即不要在构造函数中把 `this` 赋值给外部变量或启动线程）。一旦发生 this 逃逸，final 的可见性保证将失效。
+
 ## 易错点/踩坑
 
 - ❌ **错误理解**：认为工作内存就是JVM堆内存的一部分

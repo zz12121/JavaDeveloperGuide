@@ -220,4 +220,205 @@ public List<String> getSupportedFormats() {
 
 ---
 
+---
+
+# Java 平台模块系统（JPMS）
+
+## 核心结论
+
+JPMS（Java Platform Module System，JEP 261）是 JDK 9 引入的最重要特性，通过 `module-info.java` 将 Java 项目拆分为**模块**，实现显式依赖声明、强封装（`exports` / `opens`）和可靠配置。JDK 9 本身也按模块化重构为约 95 个模块。JPMS 解决了类路径（ClassPath）的传递依赖不透明、 JAR 地狱等问题。
+
+> **面试重点**：模块化是 Java 架构层面的重大变更，虽然普通业务代码感知不强，但涉及 JDK 9+ 运行时、Spring Boot 3.x 最小镜像打包时，必须理解 `requires`、`exports`、`opens` 的区别。
+
+---
+
+## 深度解析
+
+### 1. 为什么需要模块化？
+
+**ClassPath 的问题**：
+
+```java
+// 应用依赖 JAR A（需要 X 库 1.0 版本）
+// 应用依赖 JAR B（需要 X 库 2.0 版本）
+// → ClassPath 对版本不敏感，运行时可能加载错误的类
+// → 没有任何机制阻止"非法访问"——所有 public 类都可以被访问
+```
+
+**JPMS 的解决方案**：
+
+```java
+// module-info.java：声明模块的依赖和导出
+module com.myapp {
+    requires com.example.library;    // 明确依赖哪个模块
+    exports com.myapp.api;          // 只导出公开 API
+    opens com.myapp.internal;       // 仅对反射开放
+}
+```
+
+### 2. 基本语法：module-info.java
+
+```java
+// 模块声明文件必须放在 src/main/java/ 根目录
+module com.example.myapp {
+    // requires：声明模块依赖（传递依赖自动继承）
+    requires com.google.guava;
+    requires com.fasterxml.jackson;    // 必需
+
+    // requires static：编译时依赖，运行时不需要
+    requires static lombok;            // 仅编译期需要
+
+    // exports：导出包，仅导出的 public 类型可被其他模块访问
+    exports com.example.api;
+    exports com.example.dto;
+
+    // exports ... to：精确控制哪个模块可以访问（限定导出）
+    exports com.example.internal to com.example.plugin;
+
+    // opens / opens ... to：开放包供反射访问（运行时）
+    opens com.example.service;         // 对所有模块开放反射
+    opens com.example.entity to com.example.mapper;  // 仅对特定模块开放
+
+    // provides ... with：服务提供者（ServiceLoader 机制）
+    provides PaymentGateway with AlipayGateway;
+
+    // uses：服务消费者
+    uses PaymentGateway;
+}
+```
+
+### 3. 四个关键字的作用域
+
+| 关键字 | 作用 | 可见性 |
+|--------|------|--------|
+| `requires` | 声明模块依赖 | 编译期 + 运行时 |
+| `exports` | 导出包（仅导出的 public 类可访问）| 编译期 + 运行时 |
+| `opens` | 开放包供反射（运行时）| 仅运行时（Spring/Jackson 反射）|
+| `uses` | 声明服务接口依赖 | 编译期 |
+
+### 4. 导出 vs 开放：为什么需要 opens？
+
+```java
+// 场景：Spring 依赖注入需要反射访问 private 字段
+// 场景：Jackson 反序列化需要反射设置属性
+
+// exports：编译期和运行时都只能访问 public 类型
+module A {
+    exports com.example.entity;
+}
+
+class User {                    // public class
+    private String name;        // private 字段
+}
+
+// 在其他模块中：
+User u = new User();            // ✅ 通过 exports 可以访问
+u.name = "test";                // ❌ 编译错误：private 字段
+u.getClass().getDeclaredField("name").set(u, "test");  // ❌ 运行时错误
+
+// opens：允许运行时反射访问，包括 private 成员
+module A {
+    opens com.example.entity;
+}
+
+u.getClass().getDeclaredField("name").set(u, "test");  // ✅ 运行时允许
+```
+
+### 5. ServiceLoader 机制
+
+JPMS 将 JDK 6 的 `ServiceLoader` 纳入模块系统，实现模块间的**可插拔服务发现**：
+
+```java
+// 模块 com.example.spi 中定义了服务接口
+module com.example.spi {
+    exports com.example.spi;
+}
+
+package com.example.spi;
+public interface Cipher {
+    String encrypt(String text);
+}
+
+// 模块 com.example.implA 提供了实现
+module com.example.implA {
+    requires com.example.spi;
+    provides com.example.spi.Cipher with com.example.implA.AESCipher;
+}
+
+// 模块 com.example.app 使用服务
+module com.example.app {
+    requires com.example.spi;
+    uses com.example.spi.Cipher;   // 声明使用 Cipher
+}
+
+// 运行时代码
+ServiceLoader<Cipher> loader = ServiceLoader.load(Cipher.class);
+Cipher cipher = loader.findFirst().orElseThrow();
+```
+
+### 6. 模块化 JDK 的架构
+
+JDK 9 将 6000+ 个类重组为约 95 个模块：
+
+```java
+// JDK 9+ 常用模块
+java.base        // 核心基础（Object/String/Collection 等），所有模块隐式依赖
+java.logging      // 日志
+java.sql          // JDBC
+java.naming       // JNDI
+java.management   // JMX 管理
+jdk.crypto.ec     // 椭圆曲线加密（可移除，减小镜像体积）
+
+// 不再需要的模块（JDK 9+）
+java.xml.ws       // JAX-WS（已移除）
+java.corba        // CORBA（已移除）
+java.transaction  // JTA（已移除）
+```
+
+> **面试亮点**：Spring Boot 3.x 使用 GraalVM Native Image 构建最小镜像时，需要显式声明哪些 JDK 模块被使用，通过 `jlink --add-modules` 可以创建只包含必要模块的运行时镜像，大幅减小体积。
+
+### 7. 模块路径 vs 类路径
+
+| 维度 | 类路径（ClassPath）| 模块路径（Module Path）|
+|------|-----------------|---------------------|
+| 分辨率 | JAR 名（无版本感知）| 模块名（精确依赖）|
+| 可见性 | 所有 JAR 的 public 类型 | 只有 `exports` 的类型 |
+| 传递依赖 | 全部自动包含 | `requires` 才传递 |
+| 反射 | 无限制 | 需要 `opens` |
+| 依赖冲突 | 无感知 | 可检测（同一模块不同版本）|
+
+---
+
+## 代码示例
+
+```bash
+# 编译带模块的项目
+javac -d out --module-source-path src $(find src -name "*.java")
+
+# 运行模块化应用
+java --module-path out -m com.example.app/com.example.app.Main
+
+# 创建自定义 JRE（仅包含需要的模块）
+jlink --add-modules java.base,java.sql,java.logging \
+    --output my-jre \
+    --launcher app=com.example.app
+
+# 查看模块依赖
+java --list-modules
+
+# 分析模块依赖
+jdeps --module-path out --module com.example.app
+```
+
+```java
+// 运行时检查当前模块
+Module current = MyClass.class.getModule();
+System.out.println(current.getName());  // com.example.myapp
+System.out.println(current.isExported("com.example.api"));  // true/false
+```
+
+---
+
 ## 关联知识点
+
+

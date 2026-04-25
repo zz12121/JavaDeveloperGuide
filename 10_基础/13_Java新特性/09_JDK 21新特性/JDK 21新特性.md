@@ -558,4 +558,218 @@ for (var _ : items) {
 }
 ```
 
+---
+
+# ScopedValue — 线程隔离值（JDK 21 正式）
+
+## 核心结论
+
+`ScopedValue<T>`（JEP 446）是 JDK 21 正式引入的线程隔离值机制，替代 `ThreadLocal` 的首选方案。与 `ThreadLocal` 的最大区别是：`ScopedValue` 的值**不可被子线程继承**（虚拟线程创建的新虚拟线程也无法继承），且支持 **Structured Concurrency** 的结构化传播，保证值在退出作用域时被自动清理，无内存泄漏风险。
+
+---
+
+## 深度解析
+
+### 1. 为什么需要 ScopedValue？
+
+`ThreadLocal` 的经典问题：
+
+```java
+// ThreadLocal 容易引发内存泄漏（线程池复用场景）
+class UserContext {
+    static ThreadLocal<User> currentUser = new ThreadLocal<>();
+
+    public static void main(String[] args) {
+        ExecutorService pool = Executors.newFixedThreadPool(2);
+
+        pool.submit(() -> {
+            currentUser.set(new User("Alice"));
+            doWork();
+            // ❌ 如果忘记 remove()，线程复用时旧值残留
+        });
+    }
+}
+```
+
+`ScopedValue` 的解决方案——**值自动随作用域生命周期消亡**：
+
+```java
+public class UserContext {
+    static final ScopedValue<User> currentUser = ScopedValue.newInstance();
+
+    public static void main(String[] args) {
+        ScopedValue.where(currentUser, new User("Alice"))
+            .run(() -> {
+                doWork();  // 在此处 currentUser.get() 返回 Alice
+            });
+
+        // 作用域结束后，值自动清理，无需手动 remove()
+    }
+}
+```
+
+### 2. 核心特性
+
+```java
+static final ScopedValue<String> TRACE_ID = ScopedValue.newInstance();
+
+// 基础用法
+ScopedValue.where(TRACE_ID, "abc-123")
+    .run(() -> {
+        System.out.println(TRACE_ID.get());  // abc-123
+    });
+
+// 支持嵌套作用域（内层覆盖外层）
+ScopedValue.where(TRACE_ID, "outer")
+    .run(() -> {
+        System.out.println(TRACE_ID.get());  // outer
+
+        ScopedValue.where(TRACE_ID, "inner")
+            .run(() -> {
+                System.out.println(TRACE_ID.get());  // inner
+            });
+
+        System.out.println(TRACE_ID.get());  // outer（恢复）
+    });
+```
+
+### 3. ScopedValue vs ThreadLocal
+
+| 对比项 | ThreadLocal | ScopedValue |
+|--------|-----------|-------------|
+| 继承性 | 子线程可继承 | ❌ 不可继承（虚拟线程也不继承）|
+| 清理机制 | 需手动 `remove()` | 自动清理（离开作用域即失效）|
+| 内存泄漏 | 线程池复用时容易泄漏 | 无泄漏风险 |
+| 性能 | 每次 get 可能有性能开销 | 更高性能（值在线程栈外存储）|
+| 生命周期 | 与线程绑定 | 与作用域绑定 |
+| JDK 版本 | JDK 1.2 | JDK 21 |
+
+### 4. 典型使用场景：链路追踪
+
+```java
+public class TracingService {
+    static final ScopedValue<String> TRACE_ID = ScopedValue.newInstance();
+
+    public static void process() {
+        String traceId = UUID.randomUUID().toString();
+        ScopedValue.where(TRACE_ID, traceId)
+            .run(() -> {
+                serviceA();
+                serviceB();
+            });
+    }
+}
+```
+
+---
+
+# Structured Concurrency — 结构化并发（JDK 21 正式）
+
+## 核心结论
+
+`StructuredTaskScope<T>`（JEP 453，JDK 21 正式）是 JDK 21 引入的结构化并发 API，将多个并发任务的管理纳入**单一作用域**，确保所有子任务在父任务退出前完成（或失败时取消），从根本上解决"线程逃逸"导致的资源泄漏和调试困难问题。
+
+---
+
+## 深度解析
+
+### 1. 为什么需要结构化并发？
+
+传统并发的问题：
+
+```java
+// ❌ 问题：线程生命周期与任务生命周期不一致
+void processAll(List<Request> requests) {
+    ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
+    List<Future<Result>> futures = new ArrayList<>();
+
+    for (Request req : requests) {
+        futures.add(executor.submit(() -> process(req)));
+    }
+
+    // ⚠️ 如果此处抛异常，下面的 executor.shutdown() 永远不会执行
+    collectResults(futures);
+    executor.shutdown();  // 可能永远不会执行 → 资源泄漏
+}
+```
+
+结构化并发的解决方案：
+
+```java
+// ✅ 使用 StructuredTaskScope
+void processAll(List<Request> requests) throws InterruptedException {
+    try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+        List<Future<Result>> futures = scope.fork(() -> process(requests));
+        scope.join();  // 等待所有任务完成（或失败）
+
+        // ✅ 作用域退出时，未完成的任务自动取消
+        // ✅ 无需手动 shutdown()
+        collectResults(futures);
+    }
+}
+```
+
+### 2. 两种策略
+
+```java
+// 策略一：ShutdownOnFailure — 任一任务失败，全部取消
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Future<String> f1 = scope.fork(() -> queryDatabase());
+    Future<String> f2 = scope.fork(() -> callRemoteService());
+
+    scope.join();
+
+    if (scope.failed()) {
+        throw new ExecutionException(scope.exceptionOf(f1));
+    }
+
+    return merge(f1.resultNow(), f2.resultNow());
+}
+
+// 策略二：ShutdownOnSuccess — 任一任务成功，取消其他
+try (var scope = new StructuredTaskScope.ShutdownOnSuccess<String>()) {
+    scope.fork(() -> queryCache());
+    scope.fork(() -> queryDatabase());
+
+    scope.join();
+    return scope.resultNow();  // 返回最快成功的结果
+}
+```
+
+### 3. 与传统线程池的对比
+
+| 维度 | 线程池 + Future | StructuredTaskScope |
+|------|-----------------|---------------------|
+| 生命周期管理 | 手动 shutdown | 作用域退出自动清理 |
+| 失败处理 | 需手动取消其他任务 | `ShutdownOnFailure` 自动取消 |
+| 代码结构 | 分散（submit 在一处，get 在另一处）| 集中（fork 和 join 在同一作用域）|
+| 调试 | 逃逸的线程难以追踪 | 结构化，可追踪调用链 |
+| 资源泄漏 | 可能发生 | 不可能（try-with-resources 保证）|
+
+---
+
+# String Templates — 撤回说明
+
+## ⚠️ 重要更新
+
+**String Templates（JEP 430）在 JDK 21 预览后，于 JDK 24 被正式撤回（Removed）**。原因是内置模板处理器安全性设计存在争议，API 仍在重新设计中。
+
+```java
+// ❌ 该特性已被移除，JDK 24+ 无法编译
+String name = "张三";
+String s = STR."姓名：\{name}";  // 编译错误！
+```
+
+**替代方案**：
+
+| 方案 | 说明 |
+|------|------|
+| `String.format()` | JDK 1.0+，安全稳定 |
+| `MessageFormat.format()` | `java.text`，支持命名占位符 |
+| `StringBuilder` | 手动拼接，性能最优 |
+| 第三方模板库 | `StringTemplate`（ST）、`Mustache` 等 |
+
+---
+
 ## 关联知识点
+

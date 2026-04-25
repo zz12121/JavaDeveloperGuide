@@ -1,58 +1,208 @@
 ---
-title: 构造方法
+title: 构造方法面试题
 tags:
   - Java/面向对象
   - 原理型
   - 问答
 module: 02_面向对象
-created: 2026-04-18
+created: 2026-04-25
 ---
 
-# 构造方法（构造函数）
+# 构造方法
 
-## Q1：构造方法的特点？
+## Q1：构造方法能被继承吗？能被子类调用吗？
 
-**A**： 
-- 与类同名，无返回值（连 void 都不写）
-- `new` 时自动调用，用于初始化对象
-- 可以重载，但不能被 override
-- 不定义任何构造方法时，编译器提供默认无参构造
+**A：**
+**构造方法不能被继承**。子类无法直接调用父类的构造方法，只能通过 `super()` 间接调用。
 
----
+```java
+class Parent {
+    Parent() { System.out.println("Parent constructor"); }
+}
 
-## Q2：构造方法 vs 普通方法
-
-**A**：
-- 构造方法：初始化对象，无返回值，new 时调用
-- 普通方法：执行逻辑，有返回值，对象.方法名()调用
-
----
-
-## Q3：this() 和 super()？
-
-**A**： 
-- `this()`：调用本类的其他构造方法（必须在第一行）
-- `super()`：调用父类的构造方法（必须在第一行）
-- 两者不能同时出现在同一构造方法中
+class Child extends Parent {
+    Child() {
+        super();  // 必须显式或隐式调用父类构造方法
+        System.out.println("Child constructor");
+    }
+}
+```
 
 ---
 
-## Q4：构造方法能不能被 private 修饰？有什么用？
+## Q2：this() 和 super() 必须放在构造方法第一行的原因？
 
-**A**：可以。private 构造方法常见于**单例模式**和**工具类**，目的是禁止外部通过 new 创建对象。
-单例模式通过私有构造 + 静态方法获取唯一实例；工具类通过私有构造防止实例化。
+**A：**
+因为构造方法是对象创建的**起点**，必须先初始化父类部分（或本类其他构造方法），再完成当前类的初始化：
+
+```java
+class Parent {
+    Parent(int x) { }
+}
+
+class Child extends Parent {
+    Child() {
+        // ⚠️ 如果不写 super()，编译器自动插入 super()
+        System.out.println("Child init");
+    }
+}
+```
+
+如果 this() 和 super() 不在第一行，父类/本类其他构造方法就无法在对象状态初始化之前执行，可能导致引用未初始化的字段。
 
 ---
 
-## Q5：子类构造方法为什么必须调用 super()？
+## Q3：父类无参构造方法被覆盖后，子类不显式调用会怎样？
 
-**A**：因为父类的属性需要初始化，子类继承自父类，需要确保父类部分先完成初始化。
-如果不显式调用，编译器自动在第一行插入 `super()`（调用父类无参构造）。如果父类没有无参构造，子类必须显式调用 `super(参数)`。
+**A：**
+如果父类只有有参构造方法，子类**必须显式调用** `super(param)`，否则编译错误：
+
+```java
+class Parent {
+    Parent(int x) { }  // 没有无参构造方法！
+}
+
+class Child extends Parent {
+    Child() {
+        // ⚠️ 编译错误：隐式 super() 无法找到无参构造方法
+    }
+
+    Child() {
+        super(0);  // ✅ 必须显式调用
+    }
+}
+```
 
 ---
 
-## Q6：构造方法中可以调用被重写的方法吗？
+## Q4：static 方法中能用 this 和 super 吗？为什么？
 
-**A**：可以但不推荐。如果在父类构造方法中调用一个被子类重写的方法，由于子类对象已经创建，实际调用的是**子类的重写方法**，而此时子类的属性可能还未初始化，可能导致逻辑错误。这是**初始化顺序陷阱**。
+**A：**
+**不能**。static 方法属于类，在类加载时就存在，不依赖于任何对象实例。而 this 和 super 是实例级别的引用，必须依附于对象才能使用。
 
-## 关联知识点
+```java
+class Example {
+    static void staticMethod() {
+        // this.toString();  // ⚠️ 编译错误
+        // super.toString();  // ⚠️ 编译错误
+    }
+
+    void instanceMethod() {
+        this.toString();  // ✅
+        super.toString(); // ✅
+    }
+}
+```
+
+---
+
+## Q5：简述子类实例化的构造方法调用顺序？
+
+**A：**
+1. **父类静态初始化块**（只执行一次）
+2. **子类静态初始化块**（只执行一次）
+3. **父类实例初始化块**
+4. **父类构造方法**
+5. **子类实例初始化块**
+6. **子类构造方法**
+
+```java
+class Parent {
+    static { System.out.println("1. Parent static"); }
+    { System.out.println("3. Parent instance init"); }
+    Parent() { System.out.println("4. Parent constructor"); }
+}
+
+class Child extends Parent {
+    static { System.out.println("2. Child static"); }
+    { System.out.println("5. Child instance init"); }
+    Child() { System.out.println("6. Child constructor"); }
+}
+
+// new Child() 输出顺序：1 → 2 → 3 → 4 → 5 → 6
+```
+
+---
+
+## Q6：构造方法中调用被重写的方法会发生什么？
+
+**A：**
+可能发生**构造函数继承问题（Constructor Inheritance Problem）**：
+
+```java
+class Parent {
+    Parent() { print(); }  // 调用被子类重写的方法
+    void print() { System.out.println("Parent"); }
+}
+
+class Child extends Parent {
+    int x = 100;
+
+    Child() { }
+    @Override
+    void print() {
+        System.out.println(x);  // x 此时还是 0（未初始化）！
+    }
+}
+
+new Child();  // 输出：0
+```
+
+子类实例字段还未初始化（x=0），但构造方法调用了被重写的 print()，导致读取到未初始化的值。
+
+**原则：构造方法中尽量不要调用可被子类重写的方法。**
+
+---
+
+## Q7：this() 和 super() 能同时出现在同一个构造方法中吗？
+
+**A：**
+**不能**。`this()` 和 `super()` 都是构造方法调用的起点，只能有一个在第一行：
+
+```java
+class Parent {
+    Parent(int x) { }
+}
+
+class Child extends Parent {
+    Child() {
+        // ⚠️ 编译错误：this() 和 super() 不能同时出现
+        // super(0);
+        // this(1);
+    }
+
+    Child(int x) {
+        super(x);  // ✅ 第一行
+    }
+}
+```
+
+原因：`this(param)` 和 `super(param)` 都是调用另一个构造方法，被调用的构造方法必须先完成初始化工作。
+
+---
+
+## Q8：构造方法能返回值吗？
+
+**A：**
+**不能**。构造方法没有返回值类型（包括 void），编译器会自动在调用处插入对构造方法的调用：
+
+```java
+class User {
+    User() { }  // 正确：没有返回值
+
+    // User() { return; }  // ⚠️ 虽然语法上可以写 return，但不应该
+}
+```
+
+如果构造方法需要返回对象，使用工厂方法模式（Factory Method）：
+
+```java
+class User {
+    private User() { }
+
+    // 工厂方法
+    public static User create() {
+        return new User();
+    }
+}
+```

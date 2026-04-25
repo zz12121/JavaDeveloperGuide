@@ -296,3 +296,101 @@ System.out.println(rev);  // [d, c, b, a]  — 同步变化
 3. **Spring Boot 项目**：只需加一行配置 `spring.threads.virtual.enabled=true`
 
 **不需要改动**：ThreadLocal、try-catch、业务逻辑代码、框架库代码（Spring、MyBatis 等主流框架已支持）。
+
+---
+
+# ScopedValue 与 Structured Concurrency
+
+## Q14：ScopedValue 是什么？和 ThreadLocal 有什么区别？
+
+**A**：`ScopedValue<T>`（JEP 446，JDK 21 正式）是线程隔离值的新方案，用来替代 `ThreadLocal`。
+
+**核心区别**：
+
+| 对比项 | ThreadLocal | ScopedValue |
+|--------|-----------|-------------|
+| 继承性 | 子线程可继承（InheritableThreadLocal）| ❌ 不可继承，虚拟线程也不继承 |
+| 清理机制 | 需手动 `remove()`，容易遗漏导致内存泄漏 | 自动清理（离开作用域即失效）|
+| 内存泄漏风险 | 有（线程池复用场景）| 无 |
+| 适用场景 | 通用 | 虚拟线程 + 结构化并发（配合更好）|
+
+```java
+// ThreadLocal：需要手动清理，容易遗漏
+ThreadLocal<User> currentUser = new ThreadLocal<>();
+try {
+    currentUser.set(user);
+    doWork();
+} finally {
+    currentUser.remove();  // 必须手动，否则内存泄漏
+}
+
+// ScopedValue：作用域自动管理
+ScopedValue<User> currentUser = ScopedValue.newInstance();
+ScopedValue.where(currentUser, user)
+    .run(() -> doWork());  // 作用域结束自动清理，无需手动
+```
+
+**推荐迁移路径**：新增代码用 `ScopedValue`，已有 `ThreadLocal` 代码可继续使用，JDK 21 仍完全兼容。
+
+---
+
+## Q15：StructuredTaskScope 是什么？解决了什么问题？
+
+**A**：`StructuredTaskScope<T>`（JEP 453，JDK 21 正式）将并发任务的管理结构化，保证子任务的生命周期不超过父任务，从根本上解决线程逃逸问题。
+
+**解决的问题**：传统 `ExecutorService` 中，如果父任务抛出异常，`shutdown()` 可能永远不会执行，导致资源泄漏。`StructuredTaskScope` 通过 try-with-resources 确保作用域退出时自动清理。
+
+```java
+// 传统方式：异常可能导致资源泄漏
+try {
+    executor.submit(task1);
+    executor.submit(task2);
+    executor.shutdown();
+} catch (Exception e) {
+    executor.shutdown();  // 如果这里抛异常，shutdown 不会执行
+}
+
+// 结构化并发：try-with-resources 保证清理
+try (var scope = new StructuredTaskScope.ShutdownOnFailure()) {
+    Future<String> f1 = scope.fork(() -> queryDatabase());
+    Future<String> f2 = scope.fork(() -> callService());
+
+    scope.join();  // 等待所有完成
+
+    if (scope.failed()) {
+        throw new ExecutionException(scope.exceptionOf(f1));
+    }
+    return merge(f1.resultNow(), f2.resultNow());
+}
+// 作用域退出：自动取消未完成任务，清理资源
+```
+
+**两种策略**：
+- `ShutdownOnFailure`：任一任务失败 → 取消其他 → 汇总失败
+- `ShutdownOnSuccess`：任一任务成功 → 取消其他 → 返回成功结果
+
+---
+
+## Q16：String Templates 为什么被撤回了？
+
+**A**：String Templates（JEP 430）在 JDK 21 预览后，在 JDK 24 被正式撤回（Removed）。主要原因是**安全性设计缺陷**：内置的 `STR` 处理器理论上仍可能存在注入风险（如 SQL 注入），而自定义模板处理器虽然可以增强安全性，但门槛较高，社区对整体 API 设计方向存在争议。
+
+**后续方向**：JDK 团队正在重新设计该特性，未来可能以更安全的 API 重新引入。生产环境建议继续使用 `String.format()`、`MessageFormat` 或第三方模板库（Mustache、StringTemplate 等）。
+
+---
+
+## Q17：JDK 17 和 JDK 21 的 LTS 版本应该如何选择？
+
+**A**：**新项目建议直接用 JDK 21**，JDK 17 可以继续维护。
+
+| 对比 | JDK 17（LTS，2021）| JDK 21（LTS，2023）|
+|------|---------------------|---------------------|
+| 虚拟线程 | ❌ 不支持 | ✅ JDK 21 正式支持 |
+| 结构化并发 | ❌ | ✅ |
+| ScopedValue | ❌ | ✅ |
+| Switch 模式匹配 | ❌ | ✅ 正式支持 |
+| Record Patterns | ❌ | ✅ 正式支持 |
+| 生态兼容性 | Spring Boot 6.x / Spring Framework 6.x | Spring Boot 3.x |
+| 建议 | 现有项目维护 | 新项目首选 |
+
+> **关键区别**：JDK 21 是 Java 并发编程范式的转折点——虚拟线程从根本上改变了高并发应用的开发方式，JDK 17 则没有如此重大的范式变更。

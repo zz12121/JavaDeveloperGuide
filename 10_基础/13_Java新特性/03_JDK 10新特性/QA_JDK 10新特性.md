@@ -49,3 +49,35 @@ var list = new ArrayList<String>();  // 正确，推断为 ArrayList<String>
 - ✅ **推荐用**：类型名很长（如 `Map<String, List<Map.Entry<Integer, String>>>`），用 var 大幅提升可读性
 - ✅ **推荐用**：右侧类型明确（如 `var stream = list.stream();`）
 - ❌ **不推荐用**：右侧是方法调用且返回类型不直观时，保留显式类型更清晰
+
+---
+
+## Q6：Lambda 表达式中可以使用 var 吗？
+
+**A**：**JDK 11+ 可以**，但用途有限。
+
+```java
+// ✅ JDK 11+：Lambda 参数使用 var（主要用于配合注解）
+Function<String, String> f = (var s) -> s.toUpperCase();
+
+// ✅ 配合注解使用（这是主要用途）
+Predicate<String> p = (@Nonnull var s) -> !s.isEmpty();
+
+// ❌ JDK 10：Lambda 参数不能用 var
+// (var s) -> s.length()  // 编译错误
+```
+
+**为什么要有这个特性**：Lambda 参数本身类型可推断，加 `var` 没有实际意义。但在 Lambda 参数上加注解（如 `@NotNull`）时，必须显式声明参数类型，这时 `var` 就是唯一选择：
+
+```java
+// JDK 10 及之前：无法在 Lambda 参数上加注解
+list.stream().filter(s -> s != null);  // 无法强制约束 null
+
+// JDK 11+：通过 var + 注解强制约束
+list.stream().filter((@NotNull var s) -> s.length() > 0);
+```
+
+**A**：
+- ✅ **推荐用**：类型名很长（如 `Map<String, List<Map.Entry<Integer, String>>>`），用 var 大幅提升可读性
+- ✅ **推荐用**：右侧类型明确（如 `var stream = list.stream();`）
+- ❌ **不推荐用**：右侧是方法调用且返回类型不直观时，保留显式类型更清晰

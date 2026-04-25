@@ -105,7 +105,134 @@ Map<String, List<Item>> map = list.stream()
 - 需要**修改循环变量索引**（如步长遍历）
 - 需要**循环中抛出受检异常**（lambda 不支持）
 
+### 5. Stream 常见踩坑汇总
+
+#### 坑 1：parallelStream + 非线程安全集合
+
+```java
+// ❌ 危险：并行写入 ArrayList，结果不可预测
+List<String> unsafe = new ArrayList<>();
+list.parallelStream().forEach(unsafe::add);
+
+// ✅ 正确：collect 天然线程安全
+List<String> safe = list.parallelStream().collect(Collectors.toList());
+
+// ❌ 危险：并行 + HashMap
+Map<String, Integer> unsafeMap = new HashMap<>();
+list.parallelStream().forEach(s -> unsafeMap.merge(s, 1, Integer::sum));
+
+// ✅ 正确：用 ConcurrentHashMap
+Map<String, Integer> safeMap = list.parallelStream()
+    .collect(Collectors.toConcurrentMap(s -> s, s -> 1, Integer::sum));
+```
+
+#### 坑 2：Stream 被重复消费
+
+```java
+// ❌ Stream 只能遍历一次
+Stream<String> stream = list.stream();
+stream.forEach(System.out::println);
+stream.forEach(System.out::println);  // 抛异常：IllegalStateException
+
+// ✅ 正确：如果需要多次使用，collect 后再创建新 Stream
+List<String> collected = list.stream().toList();
+collected.stream().forEach(System.out::println);
+collected.stream().forEach(System.out::println);  // OK
+```
+
+#### 坑 3：filter 后忘记处理空流
+
+```java
+// ❌ findFirst/get 可能抛 NoSuchElementException
+String result = list.stream()
+    .filter(s -> s.startsWith("X"))
+    .findFirst()
+    .get();  // 如果没有匹配，抛 NoSuchElementException
+
+// ✅ 正确：用 orElse / orElseGet / orElseThrow
+String result = list.stream()
+    .filter(s -> s.startsWith("X"))
+    .findFirst()
+    .orElse("默认值");
+
+String result2 = list.stream()
+    .filter(s -> s.startsWith("X"))
+    .findFirst()
+    .orElseThrow(() -> new BusinessException("未找到"));
+```
+
+#### 坑 4：无限 Stream 未加 limit
+
+```java
+// ❌ 忘记 limit 会导致无限循环（永不终止）
+Stream.iterate(0, i -> i + 1)
+    .filter(i -> i % 2 == 0)
+    .map(i -> i * 2);  // 没有终端操作，不会执行
+
+// ❌ 即使有终端操作，没有 limit 也可能无限
+Stream.iterate(0, i -> i + 1)
+    .filter(i -> i > 10)
+    .findFirst();  // ✅ OK，找到就停止
+Stream.iterate(0, i -> i + 1)
+    .filter(i -> i > 10)
+    .count();  // ❌ 无限流，程序卡死
+
+// ✅ 正确：永远加 limit
+Stream.iterate(0, i -> i + 1)
+    .limit(1_000_000)
+    .filter(i -> i > 10)
+    .count();
+```
+
+#### 坑 5：sorted() 破坏并行流性能
+
+```java
+// ❌ sorted() 是有状态操作，并行流中需要全量收集再排序
+list.parallelStream()
+    .filter(s -> s.length() > 3)
+    .sorted()  // 有状态：需要收集全部数据到一台机器再排序
+    .collect(Collectors.toList());
+
+// ✅ 正确：如果数据量不大，用串行流
+list.stream()
+    .filter(s -> s.length() > 3)
+    .sorted()
+    .collect(Collectors.toList());
+
+// ✅ 正确：如果必须并行，用 Collector 的归约能力
+```
+
+#### 坑 6：collect 使用的收集器不恰当
+
+```java
+// ❌ 用 toMap 时未处理重复键
+Map<String, Integer> map = list.stream()
+    .collect(Collectors.toMap(s -> s, String::length));
+// 如果有重复键，抛 IllegalStateException
+
+// ✅ 正确：指定合并策略
+Map<String, Integer> map = list.stream()
+    .collect(Collectors.toMap(
+        s -> s,
+        String::length,
+        (existing, replacement) -> replacement  // 重复时取后者
+    ));
+
+// ✅ 用 groupingBy 时注意 null 键
+Map<String, List<String>> grouped = list.stream()
+    .collect(Collectors.groupingBy(
+        s -> s,   // 如果 s 为 null，抛 NPE
+        Collectors.toList()
+    ));
+
+// ✅ 正确：过滤 null 键
+Map<String, List<String>> grouped = list.stream()
+    .filter(Objects::nonNull)
+    .collect(Collectors.groupingBy(Function.identity()));
+```
+
 ---
 
 ## 关联知识点
+
 

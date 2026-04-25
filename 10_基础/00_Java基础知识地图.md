@@ -1,6 +1,6 @@
-# 🗺️ Java 基础知识地图 v1.0
+# 🗺️ Java 基础知识地图 v1.1
 
-> 本地图涵盖 Java 基础知识面试所需的全部知识点，共 **128个**，按模块分类。
+> 本地图涵盖 Java 基础知识面试所需的全部知识点，共 **142个**，按模块分类。（2026-04-25 新增 14 个知识点）
 
 ---
 
@@ -95,6 +95,7 @@
 | 14  | Queue 接口（offer/poll/peek）                                         |
 | 15  | Deque 接口（双端队列）                                                    |
 | 16  | fail-fast 与 fail-safe 机制                                          |
+| 17  | LinkedHashMap 底层实现（插入顺序/accessOrder/LRU缓存实现）           |
 
 ---
 
@@ -118,6 +119,9 @@
 | 14  | Selector 选择器（多路复用）                                        |
 | 15  | 直接内存 vs 堆内存                                               |
 | 16  | BIO/NIO/AIO 区别（同步阻塞/同步非阻塞/异步非阻塞）                          |
+| 17  | IO装饰器模式深度解析（FilterInputStream/BufferedInputStream 源码）    |
+| 18  | FileChannel文件锁与内存映射文件（mmap/零拷贝/transferTo）              |
+| 19  | NIO Path/Files API（Files.walk/find/WatchService）             |
 
 ---
 
@@ -132,6 +136,7 @@
 | 5   | 注解的提取（反射 + Annotation 接口）                         |
 | 6   | 注解的应用场景（Spring/@Component/@Autowired/JUnit 等）     |
 | 7   | @FunctionalInterface 注解                           |
+| 8   | @Repeatable注解（重复注解/JDK 8+）                         |
 
 ---
 
@@ -176,6 +181,7 @@
 | 4   | 方法引用（Method Reference）                          |
 | 5   | 构造器引用                                           |
 | 6   | Lambda 表达式作用域（访问局部变量/final 限制）                  |
+| 7   | JDK8函数式接口全家桶（Bi系列/类型特化/UnaryOperator/BinaryOperator） |
 
 ---
 
@@ -190,6 +196,8 @@
 | 5   | 并行流原理（parallelStream）                                 |
 | 6   | Stream 惰性求值                                           |
 | 7   | Stream 的性能考虑                                          |
+| 8   | Stream常用Collector详解（groupingBy/partitioningBy/toMap） |
+| 9   | IntStream/LongStream/DoubleStream 数值流（避免装箱开销）    |
 
 ---
 
@@ -211,7 +219,7 @@
 
 ---
 
-## 十三、Java 新特性（JDK 8~21）
+## 十三、Java 新特性（JDK 8~25）
 
 | #   | 知识点                                                    |
 | --- | ------------------------------------------------------ |
@@ -224,8 +232,9 @@
 | 7   | JDK 16新特性（Records 记录类）                                 |
 | 8   | JDK 17新特性（Sealed Classes 密封类）                          |
 | 9   | JDK 21新特性（模式匹配 for switch）                             |
+| 10  | JDK 22~25新特性（String Templates、Stream Gatherers、压缩字符串、Foreign Function & Memory API最终版等） |
 
 
 ---
 
-*最后更新：2026-4-21*
+*最后更新：2026-04-25（新增 JDK 22~25 新特性条目）*
