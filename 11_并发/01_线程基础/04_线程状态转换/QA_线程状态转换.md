@@ -112,4 +112,39 @@ synchronized (lock) {
 ```
 
 
+---
+
+## Q10：`ReentrantLock.lock()` 等待时线程是 BLOCKED 还是 WAITING？为什么？
+
+**A**：是 **WAITING**，不是 BLOCKED。
+
+**原因**：`ReentrantLock` 底层通过 AQS（AbstractQueuedSynchronizer）实现，等待锁时调用的是 `LockSupport.park()`，而 `park()` 会使线程进入 **WAITING** 状态。
+
+| 场景 | 线程状态 | 底层机制 |
+|------|---------|----------|
+| 等待 `synchronized` 锁 | **BLOCKED** | JVM 的 monitor 机制 |
+| 等待 `ReentrantLock.lock()` | **WAITING** | AQS + `LockSupport.park()` |
+| 调用 `Object.wait()` | **WAITING** | monitor wait-set |
+| 调用 `LockSupport.park()` | **WAITING** | Unsafe.park() |
+
+```java
+ReentrantLock lock = new ReentrantLock();
+lock.lock();  // 线程A先持有锁
+
+Thread t = new Thread(() -> {
+    lock.lock();  // 等待锁 → WAITING（不是BLOCKED！）
+});
+t.start();
+Thread.sleep(100);
+System.out.println(t.getState()); // WAITING
+
+// jstack 中会显示：
+// java.lang.Thread.State: WAITING (parking)
+//   at sun.misc.Unsafe.park(Native Method)
+//   at java.util.concurrent.locks.LockSupport.park(...)
+//   at java.util.concurrent.locks.AbstractQueuedSynchronizer.parkAndCheckInterrupt(...)
+```
+
+> **面试陷阱**：BLOCKED 状态**只有在等待 synchronized 关键字锁**时才会出现，ReentrantLock、Semaphore 等 JUC 工具等待时均为 WAITING。
+
 ## 关联知识点

@@ -115,7 +115,47 @@ Future<String> future = pool.submit(() -> "pool result");
 
 ---
 
-## Q6：一个线程执行完后还能再次 start() 吗？
+---
+
+## Q6：线程池的四种拒绝策略分别是什么？
+
+**A**：当线程池**队列已满且线程数达到最大值**时触发拒绝策略：
+
+| 策略 | 行为 | 特点 |
+|------|------|------|
+| `AbortPolicy`（默认） | 抛出 `RejectedExecutionException` | 任务提交方必须处理异常 |
+| `CallerRunsPolicy` | 调用者线程直接执行任务 | 相当于降速，不丢任务 |
+| `DiscardPolicy` | 静默丢弃新任务 | 适合允许丢失的场景 |
+| `DiscardOldestPolicy` | 丢弃队列头部最老的任务，再重试提交 | 优先保留新任务 |
+
+> **生产环境建议**：使用 `CallerRunsPolicy` 或自定义策略（记录日志、存入数据库等），避免无声丢失任务。
+
+---
+
+## Q7：`shutdown()` 和 `shutdownNow()` 有什么区别？
+
+**A**：
+
+| 方法 | 行为 | 已提交任务 | 正在执行任务 |
+|------|------|-----------|------------|
+| `shutdown()` | 温和关闭 | 继续执行完 | 不中断 |
+| `shutdownNow()` | 立即关闭 | 返回未执行列表 | 尝试中断（interrupt）|
+
+```java
+// 推荐的优雅关闭写法
+pool.shutdown();
+try {
+    if (!pool.awaitTermination(60, TimeUnit.SECONDS)) {
+        pool.shutdownNow();  // 超时再强制关闭
+    }
+} catch (InterruptedException e) {
+    pool.shutdownNow();
+    Thread.currentThread().interrupt();
+}
+```
+
+> **注意**：`shutdownNow()` 只是向正在执行的任务**发送中断信号**，任务是否响应取决于任务内部是否正确处理中断。
+
 
 **A**：不能。线程执行完毕后进入 TERMINATED 状态，不能重新启动。如果需要再次执行任务，必须创建新的 Thread 对象。
 

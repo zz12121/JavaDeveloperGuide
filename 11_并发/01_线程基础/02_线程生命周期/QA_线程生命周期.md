@@ -76,4 +76,56 @@ synchronized (lock) {
 ```
 
 
+---
+
+## Q6：一个线程能从 TERMINATED 状态重新进入 NEW 状态吗？
+
+**A**：**不能**。Java 线程的状态是单向的、不可逆的，一旦进入 TERMINATED 状态，就无法再次启动。
+
+```java
+Thread t = new Thread(() -> System.out.println("执行"));
+t.start();
+t.join(); // 等待执行完毕
+System.out.println(t.getState()); // TERMINATED
+
+t.start(); // ❌ 抛出 IllegalThreadStateException
+```
+
+如果需要再次执行同样的任务，必须创建一个**新的 Thread 对象**，或使用**线程池**来复用线程。
+
+---
+
+## Q7：如何通过代码和工具验证线程处于哪种状态？
+
+**A**：
+
+**方式1：代码中调用 `getState()`**
+```java
+Thread t = new Thread(() -> {
+    try { Thread.sleep(5000); } catch (InterruptedException e) {}
+});
+System.out.println(t.getState()); // NEW
+t.start();
+Thread.sleep(100);
+System.out.println(t.getState()); // TIMED_WAITING（sleep中）
+t.join();
+System.out.println(t.getState()); // TERMINATED
+```
+
+**方式2：jstack 命令查看线程快照**
+```bash
+# 1. 获取 JVM 进程 PID
+jps -l
+
+# 2. 打印线程堆栈（jstack 输出包含所有线程状态）
+jstack <pid>
+```
+jstack 输出中常见状态对应：
+- `RUNNABLE` → 正在运行
+- `WAITING (on object monitor)` → 调用了 `wait()`
+- `TIMED_WAITING (sleeping)` → 调用了 `sleep()`
+- `BLOCKED (on object monitor)` → 等待 synchronized 锁
+
 ## 关联知识点
+- [[04_线程状态转换]]
+- [[05_线程方法]]

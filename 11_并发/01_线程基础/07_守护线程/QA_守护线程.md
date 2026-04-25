@@ -72,4 +72,27 @@ Thread.sleep(3000);  // 主线程（用户线程）结束
 ```
 
 
+---
+
+## Q7：如何在 JVM 退出时保证守护线程的资源被正确释放？
+
+**A**：使用 `Runtime.getRuntime().addShutdownHook()` 注册 JVM 关闭钩子，在钩子线程中执行清理操作：
+
+```java
+// 注册关闭钩子
+Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+    // 关闭连接池、释放文件句柄、刷日志缓冲等
+    System.out.println("执行资源清理...");
+    connectionPool.shutdown();
+    logBuffer.flush();
+}, "cleanup-hook"));
+```
+
+**原理**：ShutdownHook 本质是注册了一个**用户线程**，JVM 在退出时会等待所有 ShutdownHook 执行完毕，因此可以保证清理操作一定执行（强制 kill -9 除外）。
+
+**注意事项**：
+- 守护线程中**不应依赖 finally 块**做关键清理，应使用 ShutdownHook 代替
+- 可以注册多个 ShutdownHook，它们并发执行，顺序不保证
+- ShutdownHook 中禁止调用 `System.exit()`
+
 ## 关联知识点

@@ -221,4 +221,37 @@ worker.join();  // 主线程阻塞，等待 worker 完成
 System.out.println("主线程继续");
 ```
 
+---
+
+## Q6：`join()` 有超时参数，超时后发生什么？会不会抛异常？
+
+**A**：`join(long millis)` 超时后**不会抛出异常**，调用线程直接返回继续执行，目标线程继续在后台运行（不会被终止）。
+
+```java
+Thread worker = new Thread(() -> {
+    try {
+        Thread.sleep(5000);  // 模拟耗时 5 秒
+        System.out.println("工作线程完成");
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+    }
+});
+worker.start();
+
+// 最多等 2 秒
+worker.join(2000);
+
+// 2 秒后不管 worker 是否完成，主线程都会继续执行
+// 此时 worker 仍在后台运行
+System.out.println("主线程超时返回，worker 状态: " + worker.getState()); // TIMED_WAITING
+
+// 判断 worker 是否在 join 超时后完成（可用于超时检测）
+if (worker.isAlive()) {
+    System.out.println("worker 仍在运行，可选择中断或等待");
+    worker.interrupt(); // 可选：主动中断
+}
+```
+
+> **注意**：如果等待期间被 `interrupt()`，`join()` 会抛出 `InterruptedException`。但单纯超时**不抛异常**，这与 `wait(timeout)` 行为一致。
+
 ## 关联知识点
