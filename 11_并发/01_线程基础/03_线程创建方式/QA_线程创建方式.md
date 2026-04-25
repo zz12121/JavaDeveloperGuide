@@ -69,5 +69,73 @@ ExecutorService pool = Executors.newFixedThreadPool(4);
 Future<String> future = pool.submit(() -> "pool result");
 ```
 
+# start vs run
 
-## 关联知识点
+## Q1：start() 和 run() 的核心区别？
+
+**A**：
+
+|维度|start()|run()|
+|---|---|---|
+|作用|启动新线程|执行线程任务|
+|线程数|创建新线程|不创建新线程|
+|执行方式|异步执行|同步执行|
+|调用次数|只能调用 1 次|可以多次调用|
+|状态变化|NEW → RUNNABLE|无变化|
+
+---
+
+## Q2：start() 的执行流程是什么？
+
+**A**：
+
+1. 检查线程状态是否为 NEW，否则抛出 `IllegalThreadStateException`
+2. 将线程加入线程组
+3. 调用 native 方法 `start0()` 向操作系统申请创建线程
+4. 新线程启动后，JVM 自动调用 `run()` 方法
+5. `start()` 方法立即返回，不等待 `run()` 执行完毕
+
+---
+
+## Q3：为什么不能直接调用 run()？
+
+**A**：直接调用 `run()` 只是普通的方法调用，不会创建新线程：代码在当前线程中同步执行，不会进行线程上下文切换，没有多线程并发的效果。
+
+---
+
+## Q4：为什么不能多次调用 start()？
+
+**A**：线程状态只能转换一次：NEW → RUNNABLE → TERMINATED。一旦线程启动或结束，就不能再次启动。多次调用 `start()` 会抛出 `IllegalThreadStateException`。
+
+---
+
+## Q5：调用 start() 后线程会立即执行吗？
+
+**A**：不会立即执行。调用 `start()` 后线程进入 RUNNABLE 状态，等待操作系统调度分配 CPU 时间片。具体何时执行取决于线程调度器和系统负载。
+
+---
+
+## Q6：一个线程执行完后还能再次 start() 吗？
+
+**A**：不能。线程执行完毕后进入 TERMINATED 状态，不能重新启动。如果需要再次执行任务，必须创建新的 Thread 对象。
+
+---
+
+## Q7：如果 run() 方法抛出异常会怎样？
+
+
+ **A**：如果 `start()` 启动的线程中 `run()` 抛出未捕获异常，线程会终止，异常可以通过 `Thread.setUncaughtExceptionHandler()` 捕获处理。如果是直接调用 `run()`，异常会在当前线程抛出，可以被 try-catch 捕获。
+```java
+// start()：启动新线程，异步执行
+Thread t = new Thread(() -> System.out.println("新线程: " + Thread.currentThread().getName()));
+t.start();   // NEW → RUNNABLE，新线程执行 run()
+System.out.println("主线程继续执行");
+
+// run()：普通方法调用，在当前线程同步执行
+Thread t2 = new Thread(() -> System.out.println("当前线程: " + Thread.currentThread().getName()));
+t2.run();    // 没有创建新线程！在主线程中执行
+
+// 多次调用 start()：IllegalThreadStateException
+t.start();   // 抛异常，线程已启动
+```
+
