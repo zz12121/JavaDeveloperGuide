@@ -39,6 +39,48 @@ public final class String {
 }
 ```
 
+### JDK 9+ Compact Strings（LATIN1 vs UTF16 编码）
+
+JVM 从 JDK 9 开始引入 **Compact Strings** 优化：若字符串只包含 Latin-1 字符（一个字符只需 1 字节），使用 `byte[]` + `coder=LATIN1`；包含其他 Unicode 字符时使用 `byte[]` + `coder=UTF16`。
+
+**为什么从 char[] 改为 byte[]？**
+
+| 维度 | JDK 8（char[]） | JDK 9+（byte[]） |
+|------|:---:|:---:|
+| Latin-1 字符 | 2 字节/字符（char） | 1 字节/字符（byte） |
+| 中文字符 | 2 字节/字符 | 2 字节/字符（UTF16，需要2个byte） |
+| 普通英文文本内存 | 100% | 约 50% |
+| 源码复杂度 | 低 | 高（需要 coder 判断） |
+
+**coder 的作用**：
+
+```java
+// coder = 0（LATIN1）：每个 byte 直接存储一个字符
+// coder = 1（UTF16）：每两个 byte 存储一个字符（Java char）
+// coder = 2（JDK 15+，UTF-8）：紧凑的字节存储
+
+public final class String {
+    private final byte[] value;
+    private final byte coder;  // COMPACT_STRINGS 开关，JVM 启动参数可关闭
+
+    // 根据 coder 选择解码方式
+    char charAt(int index) {
+        if (coder == LATIN1) {
+            return (char)(value[index] & 0xff);  // 单字节 Latin-1
+        }
+        return StringUTF16.getChar(value, index);  // 双字节 UTF16
+    }
+}
+```
+
+**与不可变性的关系**：`final byte[] value` + `final byte coder` 保证了编码和内容的双重不可变。即使 JVM 内部会在 Latin-1 和 UTF16 之间做视图切换（如 `getBytes()`），String 对象本身永远不变。
+
+**JVM 参数**：
+```bash
+# 禁用 Compact Strings（使用旧的 char[] 实现）
+-XX:-CompactStrings
+```
+
 不可变的四层保障：
 1. **`final` 修饰类**：String 类不能被继承，防止子类破坏不可变性
 2. **`final` 修饰 value 数组**：value 引用不可指向其他数组

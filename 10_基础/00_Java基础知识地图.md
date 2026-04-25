@@ -95,7 +95,8 @@
 | 14  | Queue 接口（offer/poll/peek）                                         |
 | 15  | Deque 接口（双端队列）                                                    |
 | 16  | fail-fast 与 fail-safe 机制                                          |
-| 17  | LinkedHashMap 底层实现（插入顺序/accessOrder/LRU缓存实现）           |
+| 17  | LinkedHashMap 底层实现（插入顺序/accessOrder/LRU缓存实现）                      |
+| 18  | TreeMap 底层实现                                                      |
 
 ---
 
@@ -153,6 +154,9 @@
 | 7   | 反射绕过泛型检查                                                  |
 | 8   | 反射与工厂模式/代理模式                                              |
 | 9   | 反射的性能开销                                                   |
+| 10  | Method.invoke() 底层机制                                      |
+| 11  | 反射获取注解与继承关系                                               |
+| 12  | 反射操作数组、枚举与内部类                                             |
 
 ---
 
