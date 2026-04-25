@@ -2,8 +2,8 @@
 title: "@Repeatable注解"
 tags:
   - Java/注解
-  - JDK8
   - 问答
+  - 原理型
 module: 07_注解
 created: 2026-04-25
 ---

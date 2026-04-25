@@ -1,13 +1,9 @@
 ---
-title: "JDK 22~25 新特性"
+title: JDK 22~25 新特性
 tags:
   - Java
   - 新特性
-  - 面试题
-  - JDK22
-  - JDK23
-  - JDK24
-  - JDK25
+  - 问答
 module: 13_Java新特性
 created: 2026-04-25
 ---

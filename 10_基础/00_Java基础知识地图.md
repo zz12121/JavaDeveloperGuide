@@ -1,6 +1,6 @@
 # 🗺️ Java 基础知识地图 v1.1
 
-> 本地图涵盖 Java 基础知识面试所需的全部知识点，共 **142个**，按模块分类。（2026-04-25 新增 14 个知识点）
+> 本地图涵盖 Java 基础知识面试所需的全部知识点，共 **142个**，按模块分类。
 
 ---
 
@@ -167,7 +167,7 @@
 | 5   | String 的 + 拼接原理（编译期优化）                                    |
 | 6   | String 的哈希计算                                              |
 | 7   | 字符串常量池（String Pool）                                       |
-| 8   | new String("xxx") 创建几个对象                                  |
+
 
 ---
 
@@ -196,8 +196,7 @@
 | 5   | 并行流原理（parallelStream）                                 |
 | 6   | Stream 惰性求值                                           |
 | 7   | Stream 的性能考虑                                          |
-| 8   | Stream常用Collector详解（groupingBy/partitioningBy/toMap） |
-| 9   | IntStream/LongStream/DoubleStream 数值流（避免装箱开销）    |
+
 
 ---
 
@@ -210,12 +209,11 @@
 | 3   | Comparable vs Comparator                          |
 | 4   | 枚举类（enum）                                         |
 | 5   | System 类常用方法（arraycopy/exit/gc/currentTimeMillis） |
-| 11  | Math 类常用方法                                        |
-| 6   | Random 类的线程安全问题                                   |
-| 7   | ThreadLocalRandom（高性能随机数）                         |
-| 14  | BigDecimal 浮点数精度问题                                |
-| 15  | Date/LocalDateTime/Instant 时间处理                   |
-| 16  | Arrays 工具类常用方法                                    |
+| 6   | Math 类常用方法                                        |
+| 7   | Random 类的线程安全问题                                   |
+| 8   | BigDecimal 浮点数精度问题                                |
+| 9   | Date/LocalDateTime/Instant 时间处理                   |
+| 10  | Arrays 工具类常用方法                                    |
 
 ---
 
