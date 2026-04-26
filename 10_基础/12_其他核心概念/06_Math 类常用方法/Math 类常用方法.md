@@ -56,6 +56,23 @@ Math.log(Math.E)     // 1.0  — 自然对数
 Math.log10(100)      // 2.0  — 以10为底的对数
 Math.exactAdd(a, b)  // JDK 8+ 精确加法，溢出抛异常
 Math.floorMod(a, b)  // JDK 8+ 总是返回非负余数
+Math.fma(a, b, c)     // JDK 9+  fused multiply-add: a*b + c（更高精度）
+```
+
+#### StrictMath 对比
+
+```java
+// StrictMath vs Math 的关键区别
+// Math: 允许 JVM 实现优化，结果可能因平台而异
+// StrictMath: 强制 IEEE 754 标准，跨平台结果完全一致
+
+Math.sin(1.0)         // 可能使用平台优化指令
+StrictMath.sin(1.0)   // 纯 Java 实现，结果确定
+
+// 典型场景选择
+// - 金融系统、科学计算：StrictMath（结果确定性优先）
+// - 普通业务逻辑：Math（性能优先）
+```
 ```
 
 ### 2. 注意事项

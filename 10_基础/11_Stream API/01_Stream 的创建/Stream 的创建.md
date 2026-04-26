@@ -93,6 +93,78 @@ Stream<String> concat = Stream.concat(Stream.of("a"), Stream.of("b"));
 | `Stream.iterate()` | 无限流，递推生成 | 等差/递推序列 |
 | `IntStream.range()` | 范围数值流 | 数值循环替代 |
 
+### 7. 特化流详解 (IntStream / LongStream / DoubleStream)
+
+Java 提供了三种数值特化流，避免装箱/拆箱开销：
+
+#### 创建特化流
+
+```java
+// IntStream
+IntStream intStream = IntStream.of(1, 2, 3);
+IntStream rangeStream = IntStream.range(1, 100);        // 左闭右开 [1, 100)
+IntStream closedStream = IntStream.rangeClosed(1, 100);  // 左闭右闭 [1, 100]
+
+// LongStream
+LongStream longStream = LongStream.rangeClosed(1, 1_000_000);
+
+// DoubleStream
+DoubleStream doubleStream = DoubleStream.generate(Math::random);
+```
+
+#### IntStream 常用方法
+
+| 方法 | 说明 | 示例 |
+|------|------|------|
+| `sum()` | 求和 | `IntStream.of(1,2,3).sum()` → 6 |
+| `average()` | 求平均值，返回 OptionalDouble | `IntStream.of(1,2,3).average()` → OptionalDouble[2.0] |
+| `min()` / `max()` | 最小/最大值，返回 OptionalInt | `IntStream.of(1,2,3).max()` → OptionalInt[3] |
+| `range(a, b)` | 左闭右开范围 | `IntStream.range(1, 5)` → [1,2,3,4] |
+| `rangeClosed(a, b)` | 左闭右闭范围 | `IntStream.rangeClosed(1, 5)` → [1,2,3,4,5] |
+| `boxed()` | 转回包装类型 Stream | `intStream.boxed()` → Stream<Integer> |
+| `mapToObj()` | 映射为对象流 | `intStream.mapToObj(String::valueOf)` |
+| `summaryStatistics()` | 一次性获取所有统计 | 返回 IntSummaryStatistics |
+| `takeWhile()` | JDK 9+，条件满足时取元素 | `IntStream.range(1,10).takeWhile(x -> x < 5)` |
+| `dropWhile()` | JDK 9+，跳过满足条件的元素 | `IntStream.range(1,10).dropWhile(x -> x < 5)` |
+
+#### 统计汇总
+
+```java
+IntSummaryStatistics stats = IntStream.rangeClosed(1, 100)
+    .summaryStatistics();
+
+System.out.println("Count: " + stats.getCount());      // 100
+System.out.println("Sum: " + stats.getSum());          // 5050
+System.out.println("Min: " + stats.getMin());          // 1
+System.out.println("Max: " + stats.getMax());          // 100
+System.out.println("Average: " + stats.getAverage());  // 50.5
+```
+
+#### mapToXxx 系列（与其他 Stream 互转）
+
+```java
+// Stream<T> → 特化流
+int sum = list.stream().mapToInt(Integer::intValue).sum();
+long max = list.stream().mapToLong(Long::longValue).max().orElse(0);
+
+// 特化流 → Stream<T>
+Stream<Integer> boxed = intStream.boxed();
+Stream<String> asStrings = intStream.mapToObj(String::valueOf);
+
+// IntStream → DoubleStream
+DoubleStream doubles = intStream.asDoubleStream();
+```
+
+#### 生成斐波那契数列示例
+
+```java
+// 使用 iterate 生成斐波那契数列
+Stream.iterate(new long[]{1, 1}, f -> new long[]{f[1], f[0] + f[1]})
+    .limit(10)
+    .map(f -> f[0])
+    .forEach(System.out::println);
+```
+
 ---
 
 ## 关联知识点

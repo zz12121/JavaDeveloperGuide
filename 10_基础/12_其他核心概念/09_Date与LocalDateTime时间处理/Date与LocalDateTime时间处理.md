@@ -96,5 +96,112 @@ Date legacyDate = Date.from(inst);
 
 ---
 
+### 5. DateTimeFormatter 深入用法
+
+#### 预定义格式器
+
+```java
+// ISO 标准格式
+LocalDateTime.parse("2026-04-18T13:30:00")  // ISO_LOCAL_DATE_TIME
+LocalDate.parse("2026-04-18")                // ISO_LOCAL_DATE
+LocalTime.parse("13:30:00")                  // ISO_LOCAL_TIME
+
+// 其他预定义格式
+DateTimeFormatter.BASIC_ISO_DATE;             // 20260418
+DateTimeFormatter.ISO_ZONED_DATE_TIME;       // 2026-04-18T13:30:00+08:00[Asia/Shanghai]
+DateTimeFormatter.RFC_1123_DATE_TIME;         // Sat, 18 Apr 2026 13:30:00 +0800
+```
+
+#### 自定义格式模式
+
+```java
+DateTimeFormatter f1 = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+// 2026/04/18
+
+DateTimeFormatter f2 = DateTimeFormatter.ofPattern("yyyy年M月d日 EEEE", Locale.CHINA);
+// 2026年4月18日 星期六
+
+DateTimeFormatter f3 = DateTimeFormatter.ofPattern("HH:mm:ss.SSS");
+// 13:30:45.123
+
+// 解析带时区的字符串
+ZonedDateTime zdt = ZonedDateTime.parse("2026-04-18T13:30:00+08:00[Asia/Shanghai]");
+```
+
+#### 本地化格式化
+
+```java
+// 不同地区使用不同格式
+DateTimeFormatter us = DateTimeFormatter.ofPattern("MM/dd/yyyy", Locale.US);
+DateTimeFormatter cn = DateTimeFormatter.ofPattern("yyyy年MM月dd日", Locale.CHINA);
+DateTimeFormatter jp = DateTimeFormatter.ofPattern("yyyy年MM月dd日", Locale.JAPAN);
+```
+
+#### 带时区的格式化
+
+```java
+ZonedDateTime now = ZonedDateTime.now();
+
+// 格式化为字符串（带时区）
+DateTimeFormatter zonedFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss XXX");
+String zonedStr = now.format(zonedFormatter); // "2026-04-18 13:30:00 +08:00"
+
+// 带时区名称
+DateTimeFormatter withZoneName = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss z");
+String withZone = now.format(withZoneName);   // "2026-04-18 13:30:00 CST"
+```
+
+#### 格式化与解析的异常处理
+
+```java
+try {
+    LocalDate date = LocalDate.parse("2026-04-18");
+} catch (DateTimeParseException e) {
+    // 日期格式不正确
+}
+
+// 使用自定义格式解析
+DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+LocalDate date = LocalDate.parse("2026-04-18", formatter);
+```
+
+### 6. 时区处理实战
+
+```java
+// 获取所有可用时区
+ZoneId.getAvailableZoneIds().forEach(System.out::println);
+
+// 将 UTC 转换为指定时区
+Instant utc = Instant.now();
+ZonedDateTime shanghai = utc.atZone(ZoneId.of("Asia/Shanghai"));
+ZonedDateTime london = utc.atZone(ZoneId.of("Europe/London"));
+
+// 带时区的时间计算
+ZonedDateTime flightDepart = ZonedDateTime.of(2026, 4, 18, 8, 0, 0, 0, ZoneId.of("Asia/Shanghai"));
+Duration flightDuration = Duration.ofHours(12);
+ZonedDateTime arrival = flightDepart.plus(flightDuration)
+    .withZoneSameInstant(ZoneId.of("America/New_York")); // 自动转换时区
+```
+
+### 7. TemporalAdjusters 工具类
+
+```java
+import java.time.temporal.TemporalAdjusters;
+
+// 获取指定日期的下个周一
+LocalDate nextMonday = today.with(TemporalAdjusters.next(DayOfWeek.MONDAY));
+
+// 月末
+LocalDate lastDayOfMonth = today.with(TemporalAdjusters.lastDayOfMonth());
+
+// 年末
+LocalDate lastDayOfYear = today.with(TemporalAdjusters.lastDayOfYear());
+
+// 每月第一个周一
+LocalDate firstMonday = today.with(TemporalAdjusters.firstInMonth(DayOfWeek.MONDAY));
+```
+
+---
+
 ## 关联知识点
 
