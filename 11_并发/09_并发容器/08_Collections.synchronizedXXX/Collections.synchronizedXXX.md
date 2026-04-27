@@ -1,11 +1,3 @@
----
-title: Collections.synchronizedXXX
-tags:
-  - Java/并发
-  - 对比型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # Collections.synchronizedXXX
 
@@ -148,6 +140,100 @@ Map<Key, CacheEntry> safeCache =
 | 推荐场景 | 低并发、简单场景 | 高并发、有序 Map |
 
 > ⚠️ `Collections.synchronizedNavigableMap` 底层是 TreeMap，其 `subMap()` 返回的视图是弱一致性的，迭代时也需要外部同步。
+
+## 易错点与踩坑
+
+### 1. 复合操作需要外部同步（最容易踩的坑）
+
+```java
+List<String> list = Collections.synchronizedList(new ArrayList<>());
+
+// ❌ 复合操作不是原子的！
+if (!list.contains("key")) {  // 步骤1：加锁检查
+    list.add("key");           // 步骤2：加锁添加
+}  // 两步之间其他线程可能已经添加了
+
+// 结果：可能添加重复元素
+
+// ✅ 正确做法：外部手动同步
+synchronized (list) {
+    if (!list.contains("key")) {
+        list.add("key");
+    }
+}
+
+// ✅ 更好：用并发容器自带的方法
+// ConcurrentHashMap: computeIfAbsent
+// ConcurrentSkipListMap: putIfAbsent
+```
+
+### 2. 迭代时必须手动同步（高频面试点）
+
+```java
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>());
+map.put("A", 1); map.put("B", 2);
+
+// ❌ 迭代时不加锁，抛 ConcurrentModificationException
+try {
+    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+        System.out.println(entry.getKey());
+    }
+} catch (java.util.ConcurrentModificationException e) {
+    System.out.println("迭代时抛异常！");
+}
+
+// ✅ 正确做法：在 synchronized 块中迭代
+synchronized (map) {
+    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+        System.out.println(entry.getKey());
+    }
+}
+
+// ⚠️ 即使加了同步，其他线程可能在迭代期间修改
+```
+
+### 3. 默认 mutex 是 this，容易产生死锁
+
+```java
+List<String> list = Collections.synchronizedList(new ArrayList<>());
+
+// ❌ 如果业务代码也在 synchronized(list)，可能导致死锁
+synchronized (list) {
+    list.add("A");
+    // 某处调用了 list 的方法，而这个方法内部又 synchronized(list)
+    process(list);  // 可能死锁！
+}
+
+void process(List<String> l) {
+    synchronized (l) {  // 重入没问题，但如果是不同的锁对象...
+        // ...
+    }
+}
+
+// ✅ 解决方案：使用内部锁对象
+List<String> safe = Collections.synchronizedList(
+    new ArrayList<>(),
+    new Object()  // 自定义 mutex
+);
+```
+
+### 4. 性能问题被严重低估
+
+```java
+// ❌ synchronizedXXX 是单锁，串行化所有操作
+
+// 场景：100 个并发线程同时读
+List<String> list = Collections.synchronizedList(new ArrayList<>());
+
+// ❌ 所有读操作都要排队
+// 线程1: lock() → 读 → unlock()
+// 线程2: lock() → 等待 → 读 → unlock()
+// 线程3: lock() → 等待 → ...
+
+// ✅ 正确选择：读多写少用 CopyOnWriteArrayList
+// ✅ 正确选择：高并发用 ConcurrentLinkedQueue
+// ✅ 正确选择：需要 Map 用 ConcurrentHashMap
+```
 
 ## 关联知识点
 

@@ -103,5 +103,84 @@ private void signalNotEmpty() {
 - **默认无界**：`new LinkedBlockingQueue()` 不指定容量等于 Integer.MAX_VALUE，生产速度 > 消费速度时 OOM
 - **线程池使用**：`Executors.newFixedThreadPool` 使用 LBQ，可能导致 OOM
 
+## 易错点与踩坑
+
+### 1. 默认无界队列导致 OOM（最高频问题）
+```java
+// ❌ 危险：默认容量是 Integer.MAX_VALUE
+LinkedBlockingQueue<Task> queue = new LinkedBlockingQueue<>();
+// 等价于 new LinkedBlockingQueue<>(Integer.MAX_VALUE)
+
+// 场景：生产者每秒提交1000个任务，消费者每秒只能处理100个
+// 1秒后队列积压：900个
+// 10秒后：9000个
+// 100秒后：90000个 → 内存耗尽 OOM
+
+// ✅ 生产环境必须指定容量
+LinkedBlockingQueue<Task> queue = new LinkedBlockingQueue<>(1000);
+
+// ✅ 或使用有界队列替代
+LinkedBlockingQueue<Task> queue = new LinkedBlockingQueue<>(1000);
+```
+
+### 2. 双锁设计导致的"原子性错觉"
+```java
+// put 和 take 在不同的锁下执行
+// ⚠️ putLock.signalNotEmpty() 需要获取 takeLock
+// ⚠️ takeLock.signalNotFull() 需要获取 putLock
+
+// 问题：count.get() 是原子的，但"检查队列非空+读取元素"不是原子的
+if (queue.size() > 0) {      // 线程A检查
+    String item = queue.take(); // 线程B可能先 take 完了
+}
+
+// 建议：不要基于 count 做业务判断，只用于监控
+```
+
+### 3. signalNotEmpty() 可能唤醒错误的消费者
+```java
+// put 完成后调用 signalNotEmpty()
+// 但 takeLock.signal() 只是唤醒一个等待在 notEmpty 上的线程
+// 如果有多个消费者，可能唤醒的不是"最需要"的线程
+
+// 这是 Condition 的正常行为，不是bug
+// 但在高并发场景下可能导致负载不均
+```
+
+### 4. capacity 需要在构造时确定，无法动态调整
+```java
+// ❌ LinkedBlockingQueue 没有 setCapacity 方法
+// 只能在构造时指定
+
+// ✅ 如果需要动态调整，只能重建队列
+LinkedBlockingQueue<Task> oldQueue = queue;
+queue = new LinkedBlockingQueue<>(newCapacity);
+oldQueue.drainTo(queue); // 将数据迁移到新队列
+// 注意：迁移期间可能有数据丢失或重复处理
+```
+
+### 5. head 是哨兵节点，容易忽略
+```java
+// LinkedBlockingQueue 内部结构：
+// head -> [哨兵] -> [node1] -> [node2] -> ... -> last
+
+// 哨兵节点的 item 永远是 null
+// take() 返回的是 head.next 的 item，不是 head 本身
+
+// 这意味着 size() 实际是 count.get()，不包括哨兵节点
+// 遍历时注意跳过哨兵节点（队列至少有1个Node）
+```
+
+### 6. 链表节点不会自动释放
+```java
+// take() 后，队列中旧的 Node 对象会被 GC
+// 但如果有强引用持有 Node：
+Node<T> node = queue.peek(); // 持有引用
+queue.take();                 // Node 从队列移除，但 node 变量还持有引用
+
+// ⚠️ 长时间持有 Node 引用会导致内存泄漏
+// 解决：用局部变量或及时清理引用
+```
+
 ## 关联知识点
 

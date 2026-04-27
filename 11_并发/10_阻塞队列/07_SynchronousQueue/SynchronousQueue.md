@@ -117,5 +117,115 @@ Executors.newCachedThreadPool();
 | 吞吐量 | 高（直接传递） | 中 | 低 |
 | 用途 | 任务直接交接 | 任务缓冲 | 任务缓冲 |
 
+## 易错点与踩坑
+
+### 1. CachedThreadPool 的线程爆炸问题（核心考点）
+```java
+// CachedThreadPool 使用 SynchronousQueue
+Executors.newCachedThreadPool();
+// 等价于 new ThreadPoolExecutor(0, Integer.MAX_VALUE, 60L, SECONDS, new SynchronousQueue<>())
+
+// ❌ 危险场景：
+// 1. 10000个任务同时提交
+// 2. SynchronousQueue.offer() 失败（因为没有等待的 take）
+// 3. 线程池创建 10000 个新线程
+// 4. 每个线程约 1MB 栈 → 10GB 内存 → OOM
+
+// ✅ 解决方案：给 SynchronousQueue 套一个有界队列的外层
+// 或使用自定义 RejectedExecutionHandler
+ThreadPoolExecutor pool = new ThreadPoolExecutor(
+    0, 100, 60L, SECONDS,
+    new SynchronousQueue<>(),
+    new ThreadPoolExecutor.CallerRunsPolicy() // 拒绝时由调用线程执行
+);
+```
+
+### 2. fair=true 导致的吞吐量下降
+```java
+// 公平模式（FIFO）：使用 TransferQueue
+// 等待最久的 put/take 优先匹配
+SynchronousQueue<Integer> fair = new SynchronousQueue<>(true);
+
+// 非公平模式（LIFO）：使用 TransferStack（默认）
+SynchronousQueue<Integer> unfair = new SynchronousQueue<>(false);
+
+// 性能对比（非公平是公平的 3~5 倍）
+// 但非公平可能导致线程饥饿
+```
+
+### 3. put/take 不能并发调用
+```java
+SynchronousQueue<Integer> q = new SynchronousQueue<>();
+
+// ❌ 死锁：两个线程都等待对方
+Thread A = new Thread(() -> {
+    try { q.put(1); } catch (InterruptedException e) {}
+});
+Thread B = new Thread(() -> {
+    try { q.take(); } catch (InterruptedException e) {}
+});
+A.start();
+B.start();
+// 取决于调度顺序，可能死锁
+
+// ✅ 正确使用：
+// 生产者线程只 put，消费者线程只 take
+```
+
+### 4. size() 和 isEmpty() 永远返回 0/true
+```java
+SynchronousQueue<Integer> q = new SynchronousQueue<>();
+
+// ❌ 错误认知
+q.put(1);                   // 阻塞，直到另一个线程 take
+q.isEmpty();               // 永远是 true
+q.size();                  // 永远是 0
+
+// ⚠️ 这是设计意图，不是 bug
+// SynchronousQueue 不存储元素，put 和 take 必须配对
+```
+
+### 5. peek() 永远返回 null
+```java
+SynchronousQueue<Integer> q = new SynchronousQueue<>();
+
+// ❌ 错误用法
+Integer val = q.peek(); // 永远返回 null，不会阻塞
+q.put(1);
+Integer val = q.peek(); // 仍然是 null！
+
+// peek() 在 SynchronousQueue 中没有意义
+// 必须用 take() 接收数据
+```
+
+### 6. 公平模式下的 TransferQueue 匹配顺序
+```java
+// 公平模式：匹配等待最久的线程
+// put线程A → put线程B → take线程C
+// A先等待，B后等待，C到达后匹配A
+
+// 这可能导致"反直觉"行为：
+// 生产者先 put(1)，再 put(2)
+// 消费者 take() → 得到 1（不是2）
+// 消费者 take() → 得到 2
+
+// 因为 put(1) 先等待，先被匹配
+```
+
+### 7. 与 LinkedTransferQueue 的选择
+```java
+// SynchronousQueue：put = transfer（阻塞）
+// LinkedTransferQueue：put = 入队（不阻塞），transfer = transfer（阻塞）
+
+// ✅ 如果需要缓冲能力，用 LinkedTransferQueue
+LinkedTransferQueue<Integer> lq = new LinkedTransferQueue<>();
+lq.put(1);  // 不阻塞，直接入队
+lq.take();  // 阻塞等待
+
+// ✅ 如果不需要缓冲，用 SynchronousQueue（更简单）
+SynchronousQueue<Integer> sq = new SynchronousQueue<>();
+sq.put(1);  // 阻塞，直到被 take
+```
+
 ## 关联知识点
 

@@ -1,11 +1,3 @@
----
-title: ConcurrentLinkedQueue
-tags:
-  - Java/并发
-  - 原理型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # ConcurrentLinkedQueue
 
@@ -104,5 +96,75 @@ public E poll() {
 - **无界**：不限制队列长度，内存不够时抛 OOM
 - **非阻塞**：offer 永远返回 true，poll 空时返回 null
 - 不适合需要等待/阻塞的生产者-消费者场景（用 BlockingQueue）
+
+## 易错点与踩坑
+
+### 1. offer 永远返回 true，但不代表成功入队
+
+```java
+ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
+
+// ❌ 误以为返回 true = 成功入队
+boolean result = queue.offer("item");
+System.out.println(result);  // 永远是 true
+
+// ⚠️ 实际上：
+// 1. offer 内部用无限循环 CAS，直到成功
+// 2. 在极端高并发下，如果内存耗尽，new Node() 会抛 OOM
+// 3. 但正常情况下，offer 不会失败
+
+// ✅ 真正的问题是：无界队列 + 内存限制 = OOM
+// ✅ 生产环境应该用有界 BlockingQueue
+```
+
+### 2. poll 返回 null 的二义性
+
+```java
+ConcurrentLinkedQueue<String> queue = new ConcurrentLinkedQueue<>();
+
+// ❌ 误以为 null = 队列为空
+String item = queue.poll();
+if (item == null) {
+    // 这里可能是：
+    // 1. 队列真的为空
+    // 2. 元素本身就是 null（虽然实际不允许，但语义上可能）
+}
+
+// ✅ 正确判断队列是否为空
+if (queue.isEmpty()) {
+    // 队列为空
+}
+
+// ⚠️ isEmpty() 也是非精确的（弱一致性）
+// 在 isEmpty() 和 poll() 之间，其他线程可能入队/出队
+```
+
+### 3. size() 不是一个精确的实时计数
+
+```java
+ConcurrentLinkedQueue<Integer> queue = new ConcurrentLinkedQueue<>();
+
+// ❌ size() 遍历整个链表，高并发下不准确
+int size = queue.size();  // 遍历中可能有其他线程入队/出队
+
+// ✅ 性能考虑
+// - size() 需要遍历链表，O(n) 复杂度
+// - 高并发下返回值不精确
+// ✅ 如果需要精确计数，用 AtomicInteger 自己维护
+```
+
+### 4. tail 不总是指向真正的尾节点
+
+```java
+// CLQ 的 offer 实现有"tail 滞后"优化
+// tail 允许落后真正的尾节点 1~2 个节点
+
+// ❌ 不能用 tail 来判断队列状态
+Node<E> tail = queue.tail;  // 可能不是真正的尾节点
+
+// ✅ 正确做法：遍历时小心
+// offer 可能还在入队中，tail 还没更新
+// 但最终会收敛到正确的尾节点
+```
 
 ## 关联知识点

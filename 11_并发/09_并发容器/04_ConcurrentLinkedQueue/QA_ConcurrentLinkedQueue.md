@@ -1,12 +1,3 @@
----
-title: ConcurrentLinkedQueue
-tags:
-  - Java/并发
-  - 问答
-  - 原理型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # ConcurrentLinkedQueue
 

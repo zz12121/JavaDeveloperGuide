@@ -1,11 +1,3 @@
----
-title: CopyOnWriteArrayList
-tags:
-  - Java/并发
-  - 原理型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # CopyOnWriteArrayList
 
@@ -216,6 +208,95 @@ public class COWIteratorDemo {
         list.iterator().forEachRemaining(System.out::println);  // 2 3 4
     }
 }
+```
+
+## 易错点与踩坑
+
+### 1. 写操作的高成本被低估
+
+```java
+CopyOnWriteArrayList<String> list = new CopyOnWriteArrayList<>();
+
+// ❌ 误以为 add 是 O(1)，实际是 O(n)
+// 每次 add 都要：
+// 1. ReentrantLock 加锁
+// 2. Arrays.copyOf 复制整个数组
+// 3. volatile 写切换引用
+// 4. 释放锁
+
+// 场景：10000 个元素，每次 add 复制 10000 个引用
+// 10 次 add = 10 × 10000 = 100000 次引用复制
+// 100 次 add = 100 × 10000 = 1000000 次引用复制！
+
+// ✅ 大数据量 + 频繁写：用 synchronizedList 或 CopyOnWriteArrayList 就不合适了
+```
+
+### 2. 迭代器 remove/set/add 抛 UnsupportedOperationException
+
+```java
+CopyOnWriteArrayList<String> list = new CopyOnWriteArrayList<>();
+list.add("A");
+list.add("B");
+list.add("C");
+
+Iterator<String> iter = list.iterator();
+
+// ❌ 所有修改操作都抛异常
+try {
+    iter.remove();  // UnsupportedOperationException
+} catch (Exception e) {
+    System.out.println("不支持remove");
+}
+
+try {
+    iter.set("X");  // UnsupportedOperationException
+} catch (Exception e) {
+    System.out.println("不支持set");
+}
+
+try {
+    iter.add("Y");  // UnsupportedOperationException
+} catch (Exception e) {
+    System.out.println("不支持add");
+}
+
+// ✅ 正确做法：在 list 上操作
+list.remove("A");  // OK
+list.add("D");     // OK
+```
+
+### 3. 迭代器看不到后续添加的元素
+
+```java
+CopyOnWriteArrayList<Integer> list = new CopyOnWriteArrayList<>();
+list.add(1);
+list.add(2);
+list.add(3);
+
+// ❌ 迭代器创建后，list 的修改对迭代器不可见
+Iterator<Integer> iter = list.iterator();  // 快照：[1, 2, 3]
+
+list.add(4);  // 新数组：[1, 2, 3, 4]，但迭代器仍用旧数组
+list.add(5);  // 新数组：[1, 2, 3, 4, 5]
+
+// 迭代器只能看到快照中的元素
+iter.forEachRemaining(System.out::println);  // 输出：1 2 3（没有4、5）
+```
+
+**应用场景注意**：如果业务需要在迭代过程中看到新数据，不能用 COWAL。
+
+### 4. 内存翻倍问题导致 OOM
+
+```java
+// ❌ COWAL 的内存模型
+// 假设有 1000 个 String 对象，每个 1KB
+// 每次写操作都会复制整个数组（1000 个引用 = 4KB 额外内存）
+
+// 100 次写 = 100 × 4KB = 400KB 额外内存峰值
+// 如果同时有 10 个线程在写 = 4MB 额外内存
+
+// ✅ 解决：不要用 COWAL 处理大数据量
+// ✅ 或者控制写频率：批量写、合并写
 ```
 
 ## 关联知识点

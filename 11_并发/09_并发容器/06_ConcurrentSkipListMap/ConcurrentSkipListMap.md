@@ -1,11 +1,3 @@
----
-title: ConcurrentSkipListMap
-tags:
-  - Java/并发
-  - 原理型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # ConcurrentSkipListMap
 
@@ -141,5 +133,66 @@ NavigableSet<Integer> rev  = map.descendingKeySet();   // 50,40,30,20,10
 - 需要**范围操作**（subMap、headMap、tailMap）
 - 高并发且不需要扩容（跳表天然支持动态增长）
 - **Navigable API**：区间统计、排名、倒序遍历
+
+## 易错点与踩坑
+
+### 1. 跳表层数随机导致性能不稳定
+
+```java
+// ❌ 误以为 CSLM 的性能总是 O(log n)
+// 实际上：跳表层数是概率分布，不是保证
+
+// 随机层数生成（简化）：
+// level 1 = 100%
+// level 2 = 50%
+// level 3 = 25%
+// level 4 = 12.5%
+// ...
+
+// ⚠️ 最坏情况：所有节点的层数都是 1，退化为链表，O(n)
+// 概率极低，但不是不可能
+
+// ✅ 实际应用中，跳表的平均性能更稳定
+// ✅ Redis 选择跳表而非红黑树，正是因为没有最坏情况
+```
+
+### 2. 删除操作是逻辑删除，不立即释放内存
+
+```java
+ConcurrentSkipListMap<String, Integer> map = new ConcurrentSkipListMap<>();
+map.put("A", 1);
+map.put("B", 2);
+map.put("C", 3);
+
+// ❌ 误以为 remove 后内存立即释放
+map.remove("B");  // 逻辑删除：val = null，索引节点可能保留
+
+// ⚠️ 问题：
+// 1. 底层 Node.val 设为 null（逻辑删除）
+// 2. 索引 Index 节点可能还没清理
+// 3. 高并发删除时，索引可能堆积
+
+// ✅ 解决方案：定期重建跳表（类似 HashMap 的 resize）
+```
+
+### 3. NavigableMap 子视图的弱一致性
+
+```java
+ConcurrentSkipListMap<Integer, String> map = new ConcurrentSkipListMap<>();
+map.put(1, "A"); map.put(5, "E"); map.put(10, "J");
+
+// ❌ subMap 不是独立副本，是视图
+NavigableMap<Integer, String> sub = map.subMap(2, true, 8, false);
+// sub = {5: E}
+
+// 在 sub 上删除元素
+sub.remove(5);
+
+// ⚠️ 原 map 也会被删除
+System.out.println(map.containsKey(5));  // false！
+
+// ✅ 如果需要独立副本，需要手动复制
+Map<Integer, String> copy = new ConcurrentSkipListMap<>(sub);
+```
 
 ## 关联知识点

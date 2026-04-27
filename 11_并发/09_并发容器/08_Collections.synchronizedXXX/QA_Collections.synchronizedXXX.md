@@ -1,107 +1,215 @@
+
+# Collections.synchronizedXXX QA
+
+## Q1: Collections.synchronizedMap 和 ConcurrentHashMap 如何选择？
+
+**A:**
+
+| 维度 | Collections.synchronizedMap | ConcurrentHashMap |
+|------|---------------------------|-------------------|
+| 锁机制 | synchronized（单锁） | CAS + synchronized（桶锁） |
+| 并发度 | 低（串行） | 高（桶级并发） |
+| get 性能 | O(1) + 锁开销 | O(1)，无锁读 |
+| put 性能 | O(1) + 锁开销 | O(1)，细粒度锁 |
+| 复合操作 | 需外部同步 | 提供原子方法（computeIfAbsent等） |
+| 迭代安全 | 需手动同步 | 安全（弱一致） |
+| 适用场景 | 低并发过渡期 | 高并发生产环境 |
+
+**选择建议：**
+- 高并发 → `ConcurrentHashMap`
+- 低并发、简单场景 → `Collections.synchronizedMap`
+
 ---
-title: Collections.synchronizedXXX
-tags:
-  - Java/并发
-  - 问答
-  - 对比型
-module: 09_并发容器
-created: 2026-04-18
----
 
-# Collections.synchronizedXXX
+## Q2: Collections.synchronizedMap 的迭代是否需要加锁？
 
-## Q1：Collections.synchronizedXXX 的原理是什么？
+**A:**
 
-**A**：用装饰器模式包装原始集合，所有公共方法加 synchronized（锁为 mutex 对象，默认是集合本身）：
+必须加锁。`Collections.synchronizedMap` 的迭代不是线程安全的。
 
 ```java
-public E get(int index) {
-    synchronized (mutex) { return list.get(index); }
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>());
+map.put("A", 1); map.put("B", 2);
+
+// ❌ 不加锁抛 ConcurrentModificationException
+for (Map.Entry<String, Integer> entry : map.entrySet()) {
+    // ConcurrentModificationException!
+}
+
+// ✅ 必须放在 synchronized 块中
+synchronized (map) {
+    for (Map.Entry<String, Integer> entry : map.entrySet()) {
+        System.out.println(entry.getKey());
+    }
 }
 ```
 
-整个集合用同一把锁，所有操作串行化。
-
 ---
 
-## Q2：为什么推荐用 JUC 并发容器替代 synchronizedXXX？
+## Q3: Collections.synchronizedList 和 Vector 的区别？
 
-**A**：
+**A:**
 
-| 问题 | synchronizedXXX | JUC 并发容器 |
-|------|----------------|-------------|
-| 锁粒度 | 整个集合一把锁 | 细粒度 |
-| 并发度 | 低 | 高 |
-| 复合操作 | 不安全 | putIfAbsent 等原子方法 |
-| 迭代器 | 需手动加锁 | 安全 |
-| 性能 | 差 | 好 |
-
-JUC 并发容器在设计上就是为高并发优化的，synchronizedXXX 只是简单加锁包装。
-
----
-
-## Q3：synchronizedXXX 的复合操作为什么不安全？
-
-**A**：虽然每个单独方法（contains、add）是线程安全的，但**两个方法之间的组合不是原子的**：
+| 维度 | Collections.synchronizedList | Vector |
+|------|----------------------------|--------|
+| 实现 | ArrayList + synchronized | 自己实现（早期就有） |
+| API | List 接口完整 | List 接口 + 遗留方法 |
+| 迭代器 | 需手动同步 | 需手动同步 |
+| 扩展性 | 可组合 | 固定 |
+| 推荐 | ✅ 现代用法 | 历史遗留（已不推荐） |
 
 ```java
-// 不安全
-if (!list.contains("key")) {  // 加锁 → 释放锁
-    list.add("key");           // 加锁 → 释放锁
-} // 两步之间，其他线程可能已经 add 了
+// ✅ 推荐
+List<String> list1 = Collections.synchronizedList(new ArrayList<>());
+
+// ❌ 不推荐（遗留类）
+Vector<String> list2 = new Vector<>();
 ```
 
-解决方案：手动 synchronized(list) 包裹复合操作，或使用 JUC 的原子方法（如 putIfAbsent）。
+**注意：** 两者底层都是 synchronized，性能相同。推荐 `Collections.synchronizedList` 因为更灵活（可以指定底层 List 类型）。
 
 ---
 
-## Q4：WeakHashMap 和 Collections.synchronizedMap 有什么区别？
+## Q4: Collections.synchronizedMap 的复合操作安全吗？
 
-**A**：两者解决的是不同问题：
+**A:**
 
-| 维度 | Collections.synchronizedMap | WeakHashMap |
-|------|---------------------------|-------------|
-| **目的** | 保证并发访问的线程安全 | 在 key 没有强引用时自动回收 entry |
-| **线程安全** | ✅（synchronized 包装） | ❌（需手动包装） |
-| **回收机制** | 永不自动回收 | GC 时无强引用 → 自动移除 |
-| **key 类型** | 任意对象 | 只能是弱引用（WeakReference） |
-| **底层** | 装饰器模式 + synchronized | ReferenceQueue + WeakReference |
+不安全。复合操作需要外部同步。
 
 ```java
-// WeakHashMap：适合缓存——key 不再使用时自动清理
-WeakHashMap<Key, Value> cache = new WeakHashMap<>();
-cache.put(key, value);  // key 无其他引用时，GC 清理
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>());
 
-// 线程安全的 WeakHashMap（组合使用）
-Map<Key, Value> safeCache =
-    Collections.synchronizedMap(new WeakHashMap<>());
+// ❌ 非原子操作
+if (!map.containsKey("key")) {
+    map.put("key", 1);
+} else {
+    map.put("key", map.get("key") + 1);
+}
+// 两步之间可能被其他线程修改
 
-// Collections.synchronizedMap：适合一般并发场景
-Map<Key, Value> safeMap =
-    Collections.synchronizedMap(new HashMap<>());
+// ✅ 正确做法
+synchronized (map) {
+    if (!map.containsKey("key")) {
+        map.put("key", 1);
+    } else {
+        map.put("key", map.get("key") + 1);
+    }
+}
+
+// ✅ 更好的做法：用 ConcurrentHashMap
+ConcurrentHashMap<String, Integer> chm = new ConcurrentHashMap<>();
+chm.computeIfAbsent("key", k -> 1);  // 原子操作
 ```
-
-**组合使用**：`Collections.synchronizedMap(new WeakHashMap<>())` 可以同时满足线程安全和自动回收，但实际场景中更推荐使用 `WeakHashMap` 本身 + 手动同步关键操作。
 
 ---
 
-## Q5：Collections.synchronizedNavigableMap 和 ConcurrentSkipListMap 怎么选？
+## Q5: Collections.synchronizedMap 如何实现线程安全的缓存？
 
-**A**：两者都提供有序 NavigableMap 功能，区别在于并发性能：
+**A:**
 
 ```java
-// 低并发、简单场景 → Collections.synchronizedNavigableMap
-NavigableMap<String, Integer> map1 =
-    Collections.synchronizedNavigableMap(new TreeMap<>());
-// subMap、lower/ceiling 等操作均需外部同步
+Map<String, Object> cache = Collections.synchronizedMap(new HashMap<>());
 
-// 高并发、有序 Map → ConcurrentSkipListMap
-ConcurrentSkipListMap<String, Integer> map2 = new ConcurrentSkipListMap<>();
-// 所有操作线程安全，无锁并发，NavigableMap 接口完整实现
+// ❌ 普通 get 不安全
+public Object getOrLoad(String key) {
+    Object value = cache.get(key);
+    if (value == null) {
+        value = loadFromDB(key);
+        cache.put(key, value);  // 可能重复加载
+    }
+    return value;
+}
+
+// ✅ 使用 synchronized 块
+public Object getOrLoad(String key) {
+    synchronized (cache) {
+        Object value = cache.get(key);
+        if (value == null) {
+            value = loadFromDB(key);
+            cache.put(key, value);
+        }
+        return value;
+    }
+}
+
+// ✅ 更好的做法：用 ConcurrentHashMap
+ConcurrentHashMap<String, Object> cache2 = new ConcurrentHashMap<>();
+public Object getOrLoad(String key) {
+    return cache2.computeIfAbsent(key, k -> loadFromDB(k));
+}
 ```
 
-两者 Navigable API 完全一致（lower/ceiling/higher/subMap 等），选型关键：
-- **并发度低** → `synchronizedNavigableMap`（简单）
-- **高并发** → `ConcurrentSkipListMap`（性能好）
+---
 
+## Q6: Collections.synchronizedMap 和 Hashtable 的区别？
+
+**A:**
+
+| 维度 | Collections.synchronizedMap | Hashtable |
+|------|---------------------------|----------|
+| 出现时间 | JDK 1.2 | JDK 1.0 |
+| 实现 | 包装器模式 | 直接实现 |
+| API | Map 接口完整 | 遗留方法（elements 等） |
+| null 支持 | key/value 都可为 null | key/value 都不可为 null |
+| 扩展性 | 可组合 | 固定 |
+| 推荐 | ✅ 现代用法 | 历史遗留 |
+
+```java
+// ✅ 推荐
+Map<String, Integer> map1 = Collections.synchronizedMap(new HashMap<>());
+
+// ❌ 不推荐
+Hashtable<String, Integer> map2 = new Hashtable<>();
+
+map1.put(null, 1);  // ✅ OK
+map2.put(null, 1);  // ❌ NullPointerException
+```
+
+---
+
+## Q7: Collections.synchronizedNavigableMap 和 ConcurrentSkipListMap 如何选择？
+
+**A:**
+
+| 维度 | Collections.synchronizedNavigableMap | ConcurrentSkipListMap |
+|------|-------------------------------------|----------------------|
+| 底层 | TreeMap + synchronized | 跳表 + CAS |
+| 锁机制 | 单锁 | 无锁 + 细粒度 |
+| 有序性 | ✅ | ✅ |
+| 并发性能 | 低 | 高 |
+| Navigable API | ✅ | ✅ |
+| 适用 | 低并发、有序 Map | 高并发、有序 Map |
+
+```java
+// 低并发场景
+Map<Integer, String> map1 = Collections.synchronizedNavigableMap(new TreeMap<>());
+
+// 高并发场景
+ConcurrentSkipListMap<Integer, String> map2 = new ConcurrentSkipListMap<>();
+```
+
+**选择建议：** 高并发 → `ConcurrentSkipListMap`，低并发 → `Collections.synchronizedNavigableMap`。
+
+---
+
+## Q8: Collections.synchronizedXXX 的 mutex 可以自定义吗？
+
+**A:**
+
+可以。通过重载方法指定 mutex 对象。
+
+```java
+// ✅ 默认 mutex = this（集合本身）
+List<String> list1 = Collections.synchronizedList(new ArrayList<>());
+
+// ✅ 自定义 mutex
+final Object lock = new Object();
+List<String> list2 = Collections.synchronizedList(new ArrayList<>(), lock);
+
+// ✅ 使用同一个 mutex 的多个集合
+Map<String, Integer> map = Collections.synchronizedMap(new HashMap<>(), lock);
+List<String> list = Collections.synchronizedList(new ArrayList<>(), lock);
+```
+
+**使用场景：** 当多个集合需要在业务上保持一致时，使用同一个 mutex。
 

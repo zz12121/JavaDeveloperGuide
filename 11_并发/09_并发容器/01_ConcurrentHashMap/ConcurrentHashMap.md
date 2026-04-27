@@ -1,11 +1,3 @@
----
-title: ConcurrentHashMap
-tags:
-  - Java/并发
-  - 对比型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # ConcurrentHashMap
 
@@ -702,5 +694,108 @@ JDK8 尾插法：
 |JDK7 CHM|Segment+HashEntry|头插法|Segment锁|✅ 不会|
 |JDK8 HashMap|数组+链表+红黑树|尾插法|不支持|✅ 不会|
 |JDK8 CHM|Node数组+链表+红黑树|尾插法|synchronized桶锁|✅ 不会|
+## 易错点与踩坑
+
+### 1. computeIfAbsent 的死锁/性能陷阱（JDK8特有，JDK11+已修复）
+
+```java
+// ❌ JDK8 中的经典陷阱：递归死锁
+ConcurrentHashMap<String, Object> cache = new ConcurrentHashMap<>();
+
+// 线程A
+Object value = cache.computeIfAbsent("key", k -> {
+    // 这里需要查询同样的 key
+    return cache.get("key");  // 可能触发同一线程的 computeIfAbsent 嵌套调用
+});
+
+// 实际场景：缓存预热+懒加载组合
+public Object getOrLoad(String key) {
+    return cache.computeIfAbsent(key, k -> {
+        Object data = loadFromDB(k);
+        // 业务逻辑可能触发其他 computeIfAbsent
+        return data;
+    });
+}
+```
+
+**问题原因**：JDK8 中 computeIfAbsent 会检查当前节点是否正在被其他线程创建，如果是则自旋等待。如果递归调用同一个 key，可能导致栈溢出或死锁。
+
+**JDK11+修复**：不再自旋等待，改为直接返回 null 或创建新值。
+
+### 2. size() vs mappingCount() 的坑
+
+```java
+ConcurrentHashMap<String, Integer> map = new ConcurrentHashMap<>();
+
+// ❌ size() 返回 int，可能溢出
+// 如果 map 超过 Integer.MAX_VALUE (2^31-1)，会截断
+int s = map.size();  // 可能不准确
+
+// ✅ JDK8+ 推荐使用 mappingCount()
+long count = map.mappingCount();  // 返回 long，不会溢出
+```
+
+**场景**：大数据量统计（如 UV 计数）时必须用 `mappingCount()`。
+
+### 3. 迭代器弱一致性导致的数据丢失感
+
+```java
+ConcurrentHashMap<String, Integer> map = new ConcurrentHashMap<>();
+map.put("A", 1);
+map.put("B", 2);
+
+// ❌ 错误认知：迭代器应该看到实时数据
+Iterator<Map.Entry<String, Integer>> iter = map.entrySet().iterator();
+
+// 线程B同时修改
+map.put("C", 3);
+map.remove("A");
+
+// 迭代器可能看到：跳过 C，部分元素可能重复或跳过
+while (iter.hasNext()) {
+    Map.Entry<String, Integer> entry = iter.next();
+    System.out.println(entry.getKey());
+}
+```
+
+**原理**：CHM 迭代器遍历的是桶的快照，不会抛 ConcurrentModificationException，但也不保证遍历所有元素。
+
+### 4. 红黑树退化时节点丢失
+
+```java
+// 扩容过程中，如果数组长度 < 64，会优先扩容而非树化
+// 扩容拆分后，红黑树可能退化为链表
+
+ConcurrentHashMap<String, Integer> map = new ConcurrentHashMap<>();
+// 连续 put 触发扩容：数组从 16 → 32 → 64
+// 在扩容期间，某桶的树可能被打散
+
+// ⚠️ 扩容后再树化：需要再次达到阈值（8个节点）
+// 中间状态可能导致查找效率下降
+```
+
+**建议**：避免频繁的 put+remove 交替操作，这会导致扩容和树化退化循环。
+
+### 5. key/value 都不允许为 null（与 HashMap 不同）
+
+```java
+// ❌ HashMap 允许 null key/value
+HashMap<String, Integer> hm = new HashMap<>();
+hm.put(null, 1);    // ✅ OK
+hm.put("a", null);  // ✅ OK
+
+// ❌ ConcurrentHashMap 不允许 null
+ConcurrentHashMap<String, Integer> chm = new ConcurrentHashMap<>();
+chm.put(null, 1);   // NullPointerException
+chm.put("a", null); // NullPointerException
+
+// ❌ get() 返回 null 可能是两种情况：
+// 1. key 不存在
+// 2. key 存在但 value 是 null（不允许！）
+// 无法区分！因此 CHM 禁止 null
+```
+
+**设计原因**：在并发环境下，无法区分"key不存在"和"key存在但值为null"，这会导致业务逻辑错误。
+
 ## 关联知识点
 

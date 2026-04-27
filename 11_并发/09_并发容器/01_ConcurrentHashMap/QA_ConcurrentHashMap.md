@@ -1,12 +1,3 @@
----
-title: ConcurrentHashMap
-tags:
-  - Java/并发
-  - 问答
-  - 对比型
-module: 09_并发容器
-created: 2026-04-18
----
 
 # ConcurrentHashMap
 
