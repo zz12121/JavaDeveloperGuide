@@ -1,7 +1,7 @@
 
 # 自定义ThreadFactory
 
-## 先说结论
+## 核心结论
 
 自定义 ThreadFactory 是线程池最佳实践的核心环节，用于**规范化线程命名、设置异常处理器、控制线程属性**。默认的 ThreadFactory 创建的线程命名为 `pool-N-thread-M`，排查问题时无法区分线程来源，且没有异常处理机制。
 
@@ -88,7 +88,7 @@ factory.setThreadPriority(Thread.NORM_PRIORITY);
 
 命名格式：`{业务模块}-{功能}-%d`，方便在日志、jstack、监控中快速定位问题。
 
-## 易错点/踩坑
+## 易错点与踩坑
 
 - ❌ 使用默认 ThreadFactory，线程异常时无任何日志
 - ✅ 必须设置 UncaughtExceptionHandler

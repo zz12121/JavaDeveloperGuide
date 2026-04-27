@@ -1,7 +1,7 @@
 
 # ThreadPoolExecutor Worker原理
 
-## 先说结论
+## 核心结论
 
 Worker 是 ThreadPoolExecutor 的内部类，**继承 AQS 实现独占锁 + 实现 Runnable 接口**。每个 Worker 就是一个工作线程，通过 `runWorker()` 方法循环从队列中获取任务（`getTask()`）并执行。Worker 继承 AQS 的目的是精确控制线程中断——只有在获取锁（正在执行任务）时才允许被中断。
 
